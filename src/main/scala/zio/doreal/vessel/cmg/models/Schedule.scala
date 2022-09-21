@@ -1,7 +1,7 @@
 package zio.doreal.vessel.cmg.models
 
 import zio.json._
-import zio.doreal.vessel.ScheduleStatus
+import zio.doreal.vessel.entities.ScheduleStatus
 
 case class CmgSchedule(
   TerminalCode: String, //"CCT",

@@ -4,7 +4,7 @@ import zio._
 import zio.json._
 import zio.http.{Client, Request, URL}
 
-import zio.doreal.vessel.{ScheduleStatus, ResponseScheduleStatus, VesselService}
+import zio.doreal.vessel.{ResponseScheduleStatus, VesselService}
 import zio.doreal.vessel.cmg.models._
 
 case class CMGVesselService(client: Client) extends VesselService {

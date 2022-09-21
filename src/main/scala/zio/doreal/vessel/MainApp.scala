@@ -5,7 +5,7 @@ import zio.json._
 import zio.http.model.{Method, Headers, HttpError}
 import zio.{Scope, ZIO, ZIOAppDefault}
 
-import zio.doreal.vessel.{VesselService, ScheduleStatus}
+import zio.doreal.vessel.{VesselService}
 import zio.doreal.vessel.cmg.CMGVesselService
 
 

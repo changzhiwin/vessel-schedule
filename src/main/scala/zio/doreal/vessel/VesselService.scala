@@ -3,23 +3,7 @@ package zio.doreal.vessel
 import zio._
 import zio.json._
 
-case class ScheduleStatus(
-  shipId: String,
-  fullName: String,
-  inVoya: String,
-  outVoya: String,
-  pob: String,
-  etb: String,
-  etd: String,
-  inAgent: String,
-  outAgent: String,
-  notes: String
-)
-
-object ScheduleStatus {
-  implicit val encodeScheduleStatus: JsonEncoder[ScheduleStatus] = DeriveJsonEncoder.gen[ScheduleStatus]
-  implicit val decodeScheduleStatus: JsonDecoder[ScheduleStatus] = DeriveJsonDecoder.gen[ScheduleStatus]
-}
+import zio.doreal.vessel.entities.ScheduleStatus
 
 case class ResponseScheduleStatus(
   message: String = "Success",
