@@ -1,32 +1,46 @@
 package zio.doreal.vessel
 
 import zio.http._
-import zio.http.model.Method
+import zio.json._
+import zio.http.model.{Method, Headers, HttpError}
 import zio.{Scope, ZIO, ZIOAppDefault}
 
-object ClientServer extends ZIOAppDefault {
+import zio.doreal.vessel.{VesselService, ScheduleStatus}
+import zio.doreal.vessel.cmg.CMGVesselService
+
+
+object MainApp extends ZIOAppDefault {
 
   val app = Http.collectZIO[Request] {
     case Method.GET -> !! / "hello" =>
       ZIO.succeed(Response.text("hello"))
 
-    case Method.GET -> !! =>
-      val url = "http://eportapisct.scctcn.com/api/GVesselVoyage?VesselName=XIN%20TIAN%20JIN&PageIndex=1&PageSize=999"
-      Client.request(url)
+    case req @ Method.GET -> !! / "schedule-status" => for {
+      _ <- ZIO.unit
 
-    case Method.GET -> !! / "vessel" / name => for {
-      _    <- ZIO.succeed(name).debug("Get param:")
-
-      url  <- URL.fromString("http://eportapisct.scctcn.com/api/GVesselVoyage") match {
-        case Left(l)  => ZIO.fail(l)
-        case Right(r) => ZIO.succeed(r)
-      }
-      response <- Client.request(Request(url = url.setQueryParams(s"VesselName=${name}&PageIndex=1&PageSize=999") ))
-      body <- response.body.asString.debug("body string: ")
-    } yield Response.json(body)
+      queryParams = req.url.queryParams
+      vesselOpt = queryParams.get("vessel").map(_.head)
+      voyageOpt = queryParams.get("voyage").map(_.head)
+      fromOpt = queryParams.get("from").map(_.head)
+      toOpt   = queryParams.get("to").map(_.head)
+      headers = Headers("X-Email-To", fromOpt.get) ++ Headers("X-Email-From", toOpt.get) ++ Headers("X-Email-Subject", "Y")
+      
+      _ <- ZIO.log(s"headers = ${headers}")
+      responseStr <- (vesselOpt match {
+        case None => ZIO.succeed("""{"message":"Params missing: [vessel]"}""")
+        case Some(vessel)         => VesselService
+          .fetchScheduleStatus(vessel, voyageOpt)
+          .map(_.toJsonPretty)
+      })//.debug("Response: ")
+    } yield Response.json(responseStr).updateHeaders(h => h ++ headers)
   }
 
+  val appWithErrorHanding = app.catchAll(e => Http.response( Response.fromHttpError(HttpError.Custom(-1, e.getMessage)) ))
+
   val run = {
-    Server.serve(app).provide(Server.default, Client.default, Scope.default).exitCode
+    val config = ServerConfig.default.port(8090)
+    val configLayer = ServerConfig.live(config)
+
+    Server.serve(appWithErrorHanding).provide(configLayer, Server.live, Client.default, Scope.default, CMGVesselService.live).exitCode
   }
 }

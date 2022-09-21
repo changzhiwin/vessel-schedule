@@ -15,4 +15,7 @@ libraryDependencies ++= Seq(
 
 // Enable macro expansion, 
 // from https://zio.dev/reference/service-pattern/generating-accessor-methods-using-macros
-scalacOptions += "-Ymacro-annotations"
+scalacOptions ++= Seq(
+  "-Ymacro-annotations",
+  "-deprecation"
+)
