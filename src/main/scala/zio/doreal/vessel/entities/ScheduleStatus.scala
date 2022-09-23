@@ -14,7 +14,7 @@ case class ScheduleStatus(
   outAgent: String,
   notes: String,
 
-  // uuid, for relation
+  // uuid, for relation mapping
   id: String = ""
 )
 

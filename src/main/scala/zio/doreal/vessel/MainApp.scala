@@ -1,46 +1,37 @@
 package zio.doreal.vessel
 
+import zio._
 import zio.http._
-import zio.json._
-import zio.http.model.{Method, Headers, HttpError}
-import zio.{Scope, ZIO, ZIOAppDefault}
+import zio.http.model.{Method}
 
-import zio.doreal.vessel.{VesselService}
-import zio.doreal.vessel.cmg.CMGVesselService
+import zio.doreal.vessel.dao.memory._
+import zio.doreal.vessel.services.SubscribeVesselServiceLive
+import zio.doreal.vessel.wharf.cmg.CMGVesselService
+import zio.doreal.vessel.controls.impl.EmailSubscribeVesselCtrl
 
+import zio.doreal.vessel.controls.SubscribeVesselCtrl
 
 object MainApp extends ZIOAppDefault {
 
-  val app = Http.collectZIO[Request] {
-    case Method.GET -> !! / "hello" =>
-      ZIO.succeed(Response.text("hello"))
+  val httpApp = Http.collectZIO[Request] {
+    case Method.GET -> !! / "ping" => ZIO.succeed(Response.text("pong"))
 
-    case req @ Method.GET -> !! / "schedule-status" => for {
-      _ <- ZIO.unit
-
-      queryParams = req.url.queryParams
-      vesselOpt = queryParams.get("vessel").map(_.head)
-      voyageOpt = queryParams.get("voyage").map(_.head)
-      fromOpt = queryParams.get("from").map(_.head)
-      toOpt   = queryParams.get("to").map(_.head)
-      headers = Headers("X-Email-To", fromOpt.get) ++ Headers("X-Email-From", toOpt.get) ++ Headers("X-Email-Subject", "Y")
-      
-      _ <- ZIO.log(s"headers = ${headers}")
-      responseStr <- (vesselOpt match {
-        case None => ZIO.succeed("""{"message":"Params missing: [vessel]"}""")
-        case Some(vessel)         => VesselService
-          .fetchScheduleStatus(vessel, voyageOpt)
-          .map(_.toJsonPretty)
-      })//.debug("Response: ")
-    } yield Response.json(responseStr).updateHeaders(h => h ++ headers)
+    case req @ Method.GET -> !! / "schedule-status" => SubscribeVesselCtrl.handle(req)
   }
 
-  val appWithErrorHanding = app.catchAll(e => Http.response( Response.fromHttpError(HttpError.Custom(-1, e.getMessage)) ))
-
-  val run = {
+  def run = {
     val config = ServerConfig.default.port(8090)
     val configLayer = ServerConfig.live(config)
 
-    Server.serve(appWithErrorHanding).provide(configLayer, Server.live, Client.default, Scope.default, CMGVesselService.live).exitCode
+    Server.serve(httpApp).provide(
+        configLayer, Server.live, Client.default, Scope.default, 
+        EmailSubscribeVesselCtrl.live,
+        SubscribeVesselServiceLive.live,
+        CMGVesselService.live,
+        UserDaoImpl.live,
+        SubscriptionDaoImpl.live,
+        ShipmentDaoImpl.live,
+        ScheduleStatusDaoImpl.live
+    ).exitCode
   }
 }

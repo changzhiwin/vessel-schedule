@@ -1,3 +1,3 @@
 package zio.doreal.vessel.entities
 
-case class Subscription(shipmentId: String, users: Seq[String])
+case class Subscription(id: String, userId: String, shipmentId: String)
