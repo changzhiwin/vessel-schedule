@@ -1,6 +1,7 @@
 package zio.doreal.vessel.dao.memory
 
 import zio._
+//import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
 
 import zio.doreal.vessel.entities.Shipment
@@ -11,7 +12,7 @@ case class ShipmentDaoImpl(repo: Ref[List[Shipment]]) extends ShipmentDao {
   def save(queryKey: String, scheduleStatusId: String): Task[String] = for {
     id <- Random.nextUUID.map(_.toString())
     current <- Clock.currentTime(TimeUnit.MILLISECONDS)
-    _ <- repo.update(_.appended(Shipment(id, current, current, queryKey, scheduleStatusId)))
+    _ <- repo.update(_.appended(Shipment(id, current, current, current, queryKey, scheduleStatusId)))
   } yield id
 
   def findById(id: String): Task[Shipment] = for {
@@ -31,6 +32,11 @@ case class ShipmentDaoImpl(repo: Ref[List[Shipment]]) extends ShipmentDao {
   } yield true
 
   def getAll(): Task[List[Shipment]] = repo.get
+
+  def findExpiredUpdate(duration: Duration): Task[List[Shipment]] = for {
+    table <- repo.get
+    current <- Clock.currentTime(TimeUnit.MILLISECONDS)
+  } yield table.filter(row => row.updateAt < (current - duration.toMillis()))
 }
 
 object ShipmentDaoImpl {
