@@ -18,11 +18,12 @@ object SchedulePullService {
 case class SchedulePullServiceLive(pullNewsService: PullNewsService, shipmentDao: ShipmentDao) extends SchedulePullService {
 
   override def loop(): ZIO[Any, Throwable, Unit] = for {
-    idle <- pullNewsService.isIdle()
+    idle <- pullNewsService.isIdle().debug("Idle: ")
     _ <- ZIO.when(idle) {
       for {
-        shipmentList <- shipmentDao.findExpiredUpdate(10.seconds).debug("Expired List: ") //(10.minutes)
-        _ <- pullNewsService.accept(shipmentList.map(_.id)).debug("Accept: ")
+        shipmentList <- shipmentDao.findExpiredUpdate(10.seconds) //(10.minutes)
+        ids <- ZIO.succeed(shipmentList.map(_.id)).debug("Expired List: ")
+        _ <- pullNewsService.accept(ids)
       } yield ()
     }
   } yield ()
