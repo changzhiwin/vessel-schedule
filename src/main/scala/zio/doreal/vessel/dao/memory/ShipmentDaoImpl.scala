@@ -9,10 +9,10 @@ import zio.doreal.vessel.dao.ShipmentDao
 
 case class ShipmentDaoImpl(repo: Ref[List[Shipment]]) extends ShipmentDao {
 
-  def save(queryKey: String, scheduleStatusId: String): Task[String] = for {
+  def save(queryKey: String, vessel: String, voyage: String, wharf: String, scheduleStatusId: String): Task[String] = for {
     id <- Random.nextUUID.map(_.toString())
     current <- Clock.currentTime(TimeUnit.MILLISECONDS)
-    _ <- repo.update(_.appended(Shipment(id, current, current, current, queryKey, scheduleStatusId)))
+    _ <- repo.update(_.appended(Shipment(id, current, current, current, queryKey, vessel, voyage, wharf, scheduleStatusId)))
   } yield id
 
   def findById(id: String): Task[Shipment] = for {
@@ -37,6 +37,18 @@ case class ShipmentDaoImpl(repo: Ref[List[Shipment]]) extends ShipmentDao {
     table <- repo.get
     current <- Clock.currentTime(TimeUnit.MILLISECONDS)
   } yield table.filter(row => row.updateAt < (current - duration.toMillis()))
+
+  def updateFetchTime(shipment: Shipment): Task[Boolean] = for {
+    _ <- repo.update(_.filter(row => (row.id != shipment.id)))
+    current <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    _ <- repo.update(_.appended(shipment.copy(updateAt = current)))
+  } yield true
+
+  def updateTimeAndDetail(shipment: Shipment, statusId: String): Task[Boolean] = for {
+    _ <- repo.update(_.filter(row => (row.id != shipment.id)))
+    current <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    _ <- repo.update(_.appended(shipment.copy(updateAt = current, notifyAt = current, scheduleStatusId = statusId)))
+  } yield true
 }
 
 object ShipmentDaoImpl {

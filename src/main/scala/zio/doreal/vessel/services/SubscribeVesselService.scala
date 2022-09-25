@@ -37,11 +37,16 @@ case class SubscribeVesselServiceLive(
       }
       case None => {
         for {
-          scheduleStatusReply <- vesselService.fetchScheduleStatus(params.vessel, params.voyage).debug("Remote fetch: ")
+          scheduleStatusReply <- vesselService.getScheduleStatus(params.vessel, params.voyage, params.wharf).debug("Remote fetch: ")
           freshResult         <- scheduleStatusReply.code match {
             case 0 => for {
-              scheduleStatusId <- scheduleStatusDao.save(scheduleStatusReply.status.get)
-              shipmentId       <- shipmentDao.save(params.getQueryKey, scheduleStatusId)
+              _ <- ZIO.unit
+
+              scheduleStatus = scheduleStatusReply.status.get
+              scheduleStatusId <- scheduleStatusDao.save(scheduleStatus)
+
+              realVoyage = scheduleStatus.outVoya
+              shipmentId       <- shipmentDao.save(params.getQueryKey, params.vessel, realVoyage, params.wharf, scheduleStatusId)
               _                <- subscriptionDao.subscribe(user.id, shipmentId)
               status           <- scheduleStatusDao.findById(scheduleStatusId)
             } yield status.toJsonPretty

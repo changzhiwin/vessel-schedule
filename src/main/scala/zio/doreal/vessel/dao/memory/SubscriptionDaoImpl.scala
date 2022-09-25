@@ -37,6 +37,10 @@ case class SubscriptionDaoImpl(repo: Ref[List[Subscription]]) extends Subscripti
   } yield ret
     
   def getAll(): Task[List[Subscription]] = repo.get
+
+  def findByShipment(shipmentId: String): Task[List[Subscription]] = for {
+    table <- repo.get
+  } yield table.filter(row => row.shipmentId == shipmentId)
 }
 
 object SubscriptionDaoImpl {

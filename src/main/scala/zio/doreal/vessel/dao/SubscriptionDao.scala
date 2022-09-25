@@ -14,4 +14,6 @@ trait SubscriptionDao {
 
   def getAll(): Task[List[Subscription]]
 
+  def findByShipment(shipmentId: String): Task[List[Subscription]]
+
 }

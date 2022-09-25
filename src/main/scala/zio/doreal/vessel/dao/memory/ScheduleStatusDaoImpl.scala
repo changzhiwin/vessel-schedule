@@ -11,6 +11,12 @@ case class ScheduleStatusDaoImpl(repo: Ref[List[ScheduleStatus]]) extends Schedu
     _ <- repo.update(_.appended(scheduleStatusWithoutId.copy(id = id)))
   } yield id
 
+  def update(id: String, scheduleStatusWithoutId: ScheduleStatus): ZIO[Any, Throwable, String] = for {
+    _     <- repo.update(_.filter(row => (row.id != id)))
+    newid <- Random.nextUUID.map(_.toString())
+    _     <- repo.update(_.appended(scheduleStatusWithoutId.copy(id = newid)))
+  } yield newid
+
   def findById(id: String): ZIO[Any, Throwable, ScheduleStatus] = for {
     table <- repo.get
     record <- table.find(row => row.id == id) match {

@@ -7,6 +7,8 @@ trait ScheduleStatusDao {
 
   def save(scheduleStatusWithoutId: ScheduleStatus): ZIO[Any, Throwable, String]
 
+  def update(id: String, scheduleStatusWithoutId: ScheduleStatus): ZIO[Any, Throwable, String]
+
   def findById(id: String): ZIO[Any, Throwable, ScheduleStatus]
 
   def delete(id: String): ZIO[Any, Throwable, Boolean]

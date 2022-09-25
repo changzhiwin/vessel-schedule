@@ -5,7 +5,7 @@ import zio.http._
 import zio.http.model.{Method}
 
 import zio.doreal.vessel.dao.memory._
-import zio.doreal.vessel.services.{SubscribeVesselServiceLive, SchedulePullService, SchedulePullServiceLive, PullNewsService}
+import zio.doreal.vessel.services.{SubscribeVesselServiceLive, ScheduleFetchService, ScheduleFetchServiceLive, FetchNewsService, PublishSubscriptService}
 import zio.doreal.vessel.wharf.cmg.CMGVesselService
 import zio.doreal.vessel.controls.impl.EmailSubscribeVesselCtrl
 import zio.doreal.vessel.controls.SubscribeVesselCtrl
@@ -19,10 +19,11 @@ object MainApp extends ZIOAppDefault {
   }
 
   val myApp = for {
-    scheduleFiber <- SchedulePullService.loop().repeat(Schedule.fixed(10.seconds)).fork
-    pullFiber <- PullNewsService.start().fork
+    scheduleFiber <- ScheduleFetchService.loop().repeat(Schedule.fixed(30.seconds)).fork
+    fetchFiber <- FetchNewsService.start().fork
+    publishFiber <- PublishSubscriptService.start().fork
     _ <- Server.serve(httpRoute)
-    _ <- scheduleFiber.zip(pullFiber).join
+    _ <- scheduleFiber.zip(fetchFiber).zip(publishFiber).join
   } yield ()
 
   def run = myApp.provide(
@@ -37,7 +38,8 @@ object MainApp extends ZIOAppDefault {
     SubscriptionDaoImpl.live,
     ShipmentDaoImpl.live,
     ScheduleStatusDaoImpl.live,
-    SchedulePullServiceLive.live,
-    PullNewsService.live
+    ScheduleFetchServiceLive.live,
+    FetchNewsService.live,
+    PublishSubscriptService.live
   ) //.exitCode
 }
