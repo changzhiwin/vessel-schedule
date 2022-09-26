@@ -22,4 +22,6 @@ trait ShipmentDao {
   def updateFetchTime(shipment: Shipment): Task[Boolean]
 
   def updateTimeAndDetail(shipment: Shipment, statusId: String): Task[Boolean]
+
+  def init(shipments: List[Shipment]): Task[Boolean]
 }

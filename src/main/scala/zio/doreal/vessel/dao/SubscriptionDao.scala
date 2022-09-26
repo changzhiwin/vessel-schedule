@@ -16,4 +16,5 @@ trait SubscriptionDao {
 
   def findByShipment(shipmentId: String): Task[List[Subscription]]
 
+  def init(subscriptions: List[Subscription]): Task[Boolean]
 }

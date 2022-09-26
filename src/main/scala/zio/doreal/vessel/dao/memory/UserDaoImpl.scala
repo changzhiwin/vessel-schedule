@@ -26,6 +26,8 @@ case class UserDaoImpl(repo: Ref[List[User]]) extends UserDao {
   } yield user
 
   def getAll(): Task[List[User]] = repo.get
+
+  def init(users: List[User]): Task[Boolean] = repo.update(_ => users).map(_ => true)
 }
 
 object UserDaoImpl {

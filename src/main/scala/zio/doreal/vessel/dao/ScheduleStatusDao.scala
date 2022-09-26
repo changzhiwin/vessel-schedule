@@ -12,4 +12,8 @@ trait ScheduleStatusDao {
   def findById(id: String): ZIO[Any, Throwable, ScheduleStatus]
 
   def delete(id: String): ZIO[Any, Throwable, Boolean]
+
+  def getAll(): Task[List[ScheduleStatus]]
+
+  def init(statues: List[ScheduleStatus]): Task[Boolean]
 }

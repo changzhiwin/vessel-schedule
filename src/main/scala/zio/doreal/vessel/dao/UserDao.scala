@@ -10,4 +10,6 @@ trait UserDao {
   def findById(id: String): Task[User]
 
   def getAll(): Task[List[User]]
+
+  def init(users: List[User]): Task[Boolean]
 }

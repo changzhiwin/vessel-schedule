@@ -49,6 +49,8 @@ case class ShipmentDaoImpl(repo: Ref[List[Shipment]]) extends ShipmentDao {
     current <- Clock.currentTime(TimeUnit.MILLISECONDS)
     _ <- repo.update(_.appended(shipment.copy(updateAt = current, notifyAt = current, scheduleStatusId = statusId)))
   } yield true
+
+  def init(shipments: List[Shipment]): Task[Boolean] = repo.update(_ => shipments).map(_ => true)
 }
 
 object ShipmentDaoImpl {

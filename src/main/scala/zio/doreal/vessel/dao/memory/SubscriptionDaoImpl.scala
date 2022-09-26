@@ -19,7 +19,6 @@ case class SubscriptionDaoImpl(repo: Ref[List[Subscription]]) extends Subscripti
   } yield added
 
   def unsubscribe(userId: String, shipmentId: String): Task[Int] = for {
-    //_ <- repo.update(_.filter(row => (row.userId != userId || row.shipmentId != shipmentId)))
     added <- repo.modify(t => {
       val oldSize = t.size
       val newTb = t.filter(row => (row.userId != userId || row.shipmentId != shipmentId))
@@ -41,6 +40,8 @@ case class SubscriptionDaoImpl(repo: Ref[List[Subscription]]) extends Subscripti
   def findByShipment(shipmentId: String): Task[List[Subscription]] = for {
     table <- repo.get
   } yield table.filter(row => row.shipmentId == shipmentId)
+
+  def init(subscriptions: List[Subscription]): Task[Boolean] = repo.update(_ => subscriptions).map(_ => true)
 }
 
 object SubscriptionDaoImpl {

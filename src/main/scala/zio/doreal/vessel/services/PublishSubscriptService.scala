@@ -35,11 +35,6 @@ object PublishSubscriptService {
         item <- queue.take.debug("Publish Queue Take: ")
         subscribes <- subscriptionDao.findByShipment(item._1)
         status <- scheduleStatusDao.findById(item._2)
-        /*
-        case (shipmentId, scheduleStatusId) <- queue.take.debug("Publish Queue Take: ")
-        subscribes <- subscriptionDao.findByShipment(shipmentId)
-        status <- scheduleStatusDao.findById(scheduleStatusId)
-        */
         _ <- ZIO.foreachDiscard(subscribes) { sub =>
           for {
             user <- userDao.findById(sub.userId)
@@ -54,7 +49,7 @@ object PublishSubscriptService {
     private def pushToUser(user: User, title: String, body: String): ZIO[Any, Throwable, String] = {
       val headers = Headers("X-Email-To", user.openId) ++ Headers("X-Email-From", user.parent) ++ Headers("X-Email-Subject", title)
       for {
-        url      <- ZIO.fromEither(URL.fromString("http://0.0.0.0:8080/notify")).orDie
+        url      <- ZIO.fromEither(URL.fromString("http://0.0.0.0:8090/notify-mock")).orDie
         response <- client.request(
             Request(
               method = Method.POST, 

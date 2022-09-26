@@ -28,6 +28,10 @@ case class ScheduleStatusDaoImpl(repo: Ref[List[ScheduleStatus]]) extends Schedu
   def delete(id: String): ZIO[Any, Throwable, Boolean] = for {
     _ <- repo.update(_.filter(row => (row.id != id)))
   } yield true
+
+  def getAll(): Task[List[ScheduleStatus]] = repo.get
+
+  def init(statues: List[ScheduleStatus]): Task[Boolean] = repo.update(_ => statues).map(_ => true)
 }
 
 object ScheduleStatusDaoImpl {
