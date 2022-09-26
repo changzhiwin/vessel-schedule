@@ -5,21 +5,21 @@ import zio.doreal.vessel.dao.ShipmentDao
 
 trait ScheduleFetchService {
 
-  def loop(): ZIO[Any, Throwable, Unit]
+  def loop(duration: Duration): ZIO[Any, Throwable, Unit]
 }
 
 object ScheduleFetchService {
-  def loop(): ZIO[ScheduleFetchService, Throwable, Unit] = 
-    ZIO.serviceWithZIO[ScheduleFetchService](_.loop())
+  def loop(duration: Duration): ZIO[ScheduleFetchService, Throwable, Unit] = 
+    ZIO.serviceWithZIO[ScheduleFetchService](_.loop(duration))
 }
 
 case class ScheduleFetchServiceLive(fetchNewsService: FetchNewsService, shipmentDao: ShipmentDao) extends ScheduleFetchService {
 
-  override def loop(): ZIO[Any, Throwable, Unit] = for {
+  override def loop(duration: Duration): ZIO[Any, Throwable, Unit] = for {
     idle <- fetchNewsService.isIdle().debug("Idle: ")
     _ <- ZIO.when(idle) {
       for {
-        shipmentList <- shipmentDao.findExpiredUpdate(30.seconds) //(10.minutes)
+        shipmentList <- shipmentDao.findExpiredUpdate(duration)
         ids <- ZIO.succeed(shipmentList.map(_.id)).debug("Expired List: ")
         _ <- fetchNewsService.accept(ids)
       } yield ()

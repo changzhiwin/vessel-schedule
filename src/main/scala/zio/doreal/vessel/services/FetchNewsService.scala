@@ -23,6 +23,7 @@ object FetchNewsService {
   case class FetchNewsServiceLive(queue: Queue[String], 
       vesselService: VesselService, 
       publishSubscriptService: PublishSubscriptService,
+      fileSourceService: FileSourceService,
       shipmentDao: ShipmentDao, 
       scheduleStatusDao: ScheduleStatusDao) extends FetchNewsService {
 
@@ -39,14 +40,15 @@ object FetchNewsService {
         _          <- scheduleStatusReply.code match {
           case 0 => {
             val newStatus = scheduleStatusReply.status.get
-            //TODO
-            if (!newStatus.isSame(oldStatus)) {
+            if (newStatus.isSame(oldStatus)) {
+              // Notice: not active needSync, because have not real changed
               shipmentDao.updateFetchTime(shipment) *> ZIO.unit
             } else {
               for {
                 statusId <- scheduleStatusDao.update(oldStatus.id, newStatus)
                 _ <- shipmentDao.updateTimeAndDetail(shipment, statusId)
                 _ <- publishSubscriptService.notify(shipment.id, statusId)
+                _ <- fileSourceService.needSync
               } yield ()
             }
           }
@@ -58,13 +60,14 @@ object FetchNewsService {
     def stop(): ZIO[Any, Throwable, Unit] = queue.shutdown
   }
 
-  val live: ZLayer[VesselService with PublishSubscriptService with ShipmentDao with ScheduleStatusDao, Nothing, FetchNewsService] = ZLayer {
+  val live: ZLayer[VesselService with PublishSubscriptService with FileSourceService with ShipmentDao with ScheduleStatusDao, Nothing, FetchNewsService] = ZLayer {
     for {
       queue <- Queue.dropping[String](100)
       vesselService <- ZIO.service[VesselService]
       publishSubscriptService <- ZIO.service[PublishSubscriptService]
+      fileSourceService <- ZIO.service[FileSourceService]
       shipment <- ZIO.service[ShipmentDao]
       status <- ZIO.service[ScheduleStatusDao]
-    } yield FetchNewsServiceLive(queue, vesselService, publishSubscriptService, shipment, status)
+    } yield FetchNewsServiceLive(queue, vesselService, publishSubscriptService, fileSourceService, shipment, status)
   }
 }

@@ -1,3 +1,4 @@
+*.temp
 *.class
 *.log
 
@@ -6,3 +7,4 @@
 .vscode/
 project/
 target/
+data/*.data

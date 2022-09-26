@@ -5,8 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-//import java.io.IOException;
-//import java.io.FileNotFoundException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +36,7 @@ object FileHelper {
           stream => {
             val os = stream._2
             for {
-              count <- ZIO.attempt(os.readInt())
+              count <- ZIO.attempt(os.readInt()).debug(s"Read ${tableFile} size: ")
               objList <- ZIO.loop(0)(_ < count, _ + 1) { _ =>
                 ZIO.attempt(os.readObject().asInstanceOf[A])
               }
@@ -59,7 +57,7 @@ object FileHelper {
 
     val writeEffect = ZIO.acquireReleaseWith {
       for {
-        fstream <- ZIO.attempt(new FileOutputStream(new File(tableFileTemp)))
+        fstream <- ZIO.attempt(new FileOutputStream(new File(tablePath + tableFileTemp)))
         ostream <- ZIO.attempt(new ObjectOutputStream(fstream))
       } yield (fstream, ostream)
       
@@ -69,20 +67,19 @@ object FileHelper {
       stream => {
         val os = stream._2
         for {
-          count <- ZIO.attempt(os.writeInt(objs.length)).debug("Write size: ")
-          _     <- ZIO.foreachDiscard(objs) { item =>
-            ZIO.attempt(os.writeObject(item))
-          }
+          _ <- ZIO.debug(s"Write ${tableFileTemp} size: ${objs.size}")
+          _ <- ZIO.attempt(os.writeInt(objs.size))
+          _ <- ZIO.foreachDiscard(objs) { item => ZIO.attempt(os.writeObject(item)) }
         } yield ()
       }
     }
 
     val renameEffect = for {
-      _ <- ZIO.attempt( Files.move(sourceDone, sourceDone.resolveSibling(tableFilePrev), StandardCopyOption.REPLACE_EXISTING) )
+      //_ <- ZIO.attempt( Files.move(sourceDone, sourceDone.resolveSibling(tableFilePrev), StandardCopyOption.REPLACE_EXISTING) )
       _ <- ZIO.attempt( Files.move(sourceTemp, sourceTemp.resolveSibling(tableFileDone), StandardCopyOption.REPLACE_EXISTING) )
     } yield ()
 
-    writeEffect *> renameEffect
+    (writeEffect *> renameEffect).catchAll(e => ZIO.logError(e.getMessage))
   }
 
   private def getTableName[A](cTag: ClassTag[A]): String = {
@@ -90,7 +87,7 @@ object FileHelper {
     s"tb-${className}"
   }
 
-  val tablePath = s"./lib/"
+  val tablePath = s"./data/"
 }
 
 // ref:

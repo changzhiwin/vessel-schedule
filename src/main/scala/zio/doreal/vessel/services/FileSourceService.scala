@@ -24,7 +24,7 @@ object FileSourceService {
 
   val live: ZLayer[UserDao with SubscriptionDao with ScheduleStatusDao with ShipmentDao, Nothing, FileSourceService] = ZLayer {
     for {
-      changed <- Ref.make(true)
+      changed <- Ref.make(false)
       userDao <-  ZIO.service[UserDao]
       subscription <- ZIO.service[SubscriptionDao]
       status <- ZIO.service[ScheduleStatusDao]
@@ -40,27 +40,32 @@ object FileSourceService {
       shipmentDao: ShipmentDao
       ) extends FileSourceService {
     
-    def needSync: ZIO[Any, Nothing, Unit] = changed.update(_ => true)
+    def needSync: ZIO[Any, Nothing, Unit] = changed.update(_ => true).debug("Need Sync: ")
 
     def init(): ZIO[Any, Throwable, Unit] = for {
       users <- FileHelper.readList[User]()
       _     <- userDao.init(users)
+      subscriptions <- FileHelper.readList[Subscription]()
+      _     <- subscriptionDao.init(subscriptions)
+      scheduleStatues <- FileHelper.readList[ScheduleStatus]()
+      _     <- scheduleStatusDao.init(scheduleStatues)
+      shipments <- FileHelper.readList[Shipment]()
+      _     <- shipmentDao.init(shipments)
     } yield ()
 
     def sync(): ZIO[Any, Throwable, Unit] = for {
       isChanged <- changed.get.debug("Changed: ")
       _         <- ZIO.when(isChanged) {
         for {
-          users <- userDao.getAll().debug("User List: ")
+          users <- userDao.getAll()
           _     <- FileHelper.writeList[User](users)
-          /*
           subscriptions <- subscriptionDao.getAll()
           _     <- FileHelper.writeList[Subscription](subscriptions)
           scheduleStatues <- scheduleStatusDao.getAll()
           _     <- FileHelper.writeList[ScheduleStatus](scheduleStatues)
           shipments <- shipmentDao.getAll()
           _     <- FileHelper.writeList[Shipment](shipments)
-          */
+          _ <- changed.update(_ => false)
         } yield ()
       }
     } yield ()

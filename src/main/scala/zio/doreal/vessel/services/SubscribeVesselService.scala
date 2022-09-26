@@ -6,6 +6,7 @@ import zio.json._
 
 import zio.doreal.vessel.controls.vo.SubscribeParams
 import zio.doreal.vessel.dao._
+import zio.doreal.vessel.services.FileSourceService
 import zio.doreal.vessel.wharf.VesselService
 import zio.doreal.vessel.entities.ScheduleStatus
 
@@ -23,7 +24,8 @@ case class SubscribeVesselServiceLive(
     shipmentDao: ShipmentDao, 
     subscriptionDao: SubscriptionDao,
     scheduleStatusDao: ScheduleStatusDao,
-    vesselService: VesselService) extends SubscribeVesselService {
+    vesselService: VesselService,
+    fileSourceService: FileSourceService) extends SubscribeVesselService {
 
  def subscribe(params: SubscribeParams): ZIO[Any, Throwable, String] = for {
     user        <- userDao.findOrCreate(params.getUserWithOutId)
@@ -56,6 +58,8 @@ case class SubscribeVesselServiceLive(
       }
     }
 
+    _    <- fileSourceService.needSync
+
     // TODO: some rendering
     body <- ZIO.succeed(result)
   } yield body
@@ -69,7 +73,7 @@ case class SubscribeVesselServiceLive(
         // TODO: if added == 0, no need delete operation
         yes   <- subscriptionDao.noSubscriberExist(shipment.id)
         _     <- if (yes) scheduleStatusDao.delete(shipment.scheduleStatusId) *> shipmentDao.delete(shipment.id) else ZIO.unit
-        tips  <- if (added == 0) ZIO.succeed("You don't have subscribe") else ZIO.succeed("Unsubscribe success")
+        tips  <- if (added == 0) ZIO.succeed("You don't have subscribe") else fileSourceService.needSync *> ZIO.succeed("Unsubscribe success")
       } yield s"""{"message":"${tips}, ${params.getSubscribeInfo}."}"""
       case None => ZIO.succeed(s"""{"message":"Not exist, ${params.getSubscribeInfo}."}""")
     }
@@ -94,13 +98,14 @@ case class SubscribeVesselServiceLive(
 }
 
 object SubscribeVesselServiceLive {
-  val live: ZLayer[UserDao with ShipmentDao with SubscriptionDao with ScheduleStatusDao with VesselService, Nothing, SubscribeVesselService] = ZLayer {
+  val live: ZLayer[UserDao with ShipmentDao with SubscriptionDao with ScheduleStatusDao with VesselService with FileSourceService, Nothing, SubscribeVesselService] = ZLayer {
     for {
       user <- ZIO.service[UserDao]
       shipment <- ZIO.service[ShipmentDao]
       subscription <- ZIO.service[SubscriptionDao]
       scheduleStatus <- ZIO.service[ScheduleStatusDao]
       vesselService <- ZIO.service[VesselService]
-    } yield SubscribeVesselServiceLive(user, shipment, subscription, scheduleStatus, vesselService)
+      fileSourceService <- ZIO.service[FileSourceService]
+    } yield SubscribeVesselServiceLive(user, shipment, subscription, scheduleStatus, vesselService, fileSourceService)
   }
 }
