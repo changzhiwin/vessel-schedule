@@ -1,6 +1,6 @@
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / organization := "zio.doreal"
-ThisBuild / maintainer := "changzhiwin@gmail.com"
+// ThisBuild / maintainer := "changzhiwin@gmail.com"
 
 val ZIOVersion = "2.0.2"
 val ZIOHttpVersion = "2.0.0-RC11+50-7870fdce+20220919-2120-SNAPSHOT"

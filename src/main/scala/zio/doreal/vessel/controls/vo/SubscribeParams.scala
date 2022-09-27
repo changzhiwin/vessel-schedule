@@ -18,13 +18,15 @@ case class SubscribeParams(
   def getSubscribeInfo: String = s"[${vessel}/${voyage}]"
 
   def getUserWithOutId: User = User(id = "", openId = from, channel = channel, parent = to)
+
+  def debugPrint: String = s"[${action} | ${vessel} | ${voyage} | ${from} | ${to}]"
 }
 
 object SubscribeParams {
 
   def fromEmailChannel(querys: QueryParams): SubscribeParams = {
 
-    val action = querys.get("action").map(_.head).getOrElse("SUBSCRIPT")
+    val action: String = querys.get("action").map(_.head).getOrElse("SUBSCRIBE").toUpperCase
     val vessel = querys.get("vessel").map(_.head).getOrElse("-")
     val voyage = querys.get("voyage").map(_.head).getOrElse("-")
     val wharf = querys.get("wharf").map(_.head).getOrElse("CMG")

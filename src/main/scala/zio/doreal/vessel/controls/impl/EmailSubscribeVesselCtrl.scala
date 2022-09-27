@@ -16,9 +16,10 @@ case class EmailSubscribeVesselCtrl(subscribeVesselService: SubscribeVesselServi
     val headers = Headers("X-Email-To", subParams.from) ++ Headers("X-Email-From", subParams.to) ++ Headers("X-Email-Subject", "Y")
 
     for {
+      _       <- ZIO.log("Request: " + subParams.debugPrint)
       content <- subParams.action match {
-        case "SUBSCRIPT"   => subscribeVesselService.subscribe(subParams)
-        case "UNSUBSCRIPT" => subscribeVesselService.unsubscribe(subParams)
+        case "SUBSCRIBE"   => subscribeVesselService.subscribe(subParams)
+        case "UNSUBSCRIBE" => subscribeVesselService.unsubscribe(subParams)
         case "ADMIN"       => subscribeVesselService.admin(subParams)
         case _             => ZIO.succeed("Not support.")
       }
