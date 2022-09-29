@@ -40,8 +40,8 @@ object FetchNewsService {
         _          <- scheduleStatusReply.code match {
           case 0 => {
             val newStatus = scheduleStatusReply.status.get
-            if (newStatus.isSame(oldStatus)) {
-              // Notice: not active needSync, because have not real changed
+            if (newStatus.isNotChangeOrEnd(oldStatus)) {
+              // Notice: don't active needSync, because have not real changed
               shipmentDao.updateFetchTime(shipment) *> ZIO.unit
             } else {
               for {

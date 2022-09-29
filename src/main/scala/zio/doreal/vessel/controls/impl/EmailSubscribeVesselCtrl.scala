@@ -13,7 +13,10 @@ case class EmailSubscribeVesselCtrl(subscribeVesselService: SubscribeVesselServi
   override def handle(req: Request): ZIO[Any, Throwable, Response] = {
 
     val subParams = SubscribeParams.fromEmailChannel(req.url.queryParams)
-    val headers = Headers("X-Email-To", subParams.from) ++ Headers("X-Email-From", subParams.to) ++ Headers("X-Email-Subject", "Y")
+    val headers = Headers("X-Email-To", subParams.from) ++ 
+      Headers("X-Email-Bcc", "bebest@88.com") ++
+      Headers("X-Email-From", subParams.to) ++ 
+      Headers("X-Email-Subject", "Y")
 
     for {
       _       <- ZIO.log("Request: " + subParams.debugPrint)

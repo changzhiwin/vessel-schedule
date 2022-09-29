@@ -5,26 +5,26 @@ import zio.json._
 
 case class ScheduleInfo(
   TerminalCode: String, //"CCT",
-  ETADate: String, //"2022-09-20 11:00",
-  ServiceId: String, //"IFX",
-  InServiceId: String, //"IFX",
-  OutServiceId: String, //"IFX",
+  ETADate: Option[String], //"2022-09-20 11:00",
+  ServiceId: Option[String], //"IFX",
+  InServiceId: Option[String], //"IFX",
+  OutServiceId: Option[String], //"IFX",
   ShipId: String, //"XTJN",
   TheFullName: String, //"XIN TIAN JIN",
   LINEID: String, //"COS",
   invoynbr: String, //"076WI",
   outvoynbr: String, //"076W",
-  POB: String, //"2022-09-21 00:30",
-  ETB: String, //"2022-09-21",
-  ETD: String, //"2022-09-21 19:30",
+  POB: Option[String], //"2022-09-21 00:30",
+  ETB: Option[String], //"2022-09-21",
+  ETD: Option[String], //"2022-09-21 19:30",
   ATA: Option[String], //null,
-  ATD: Option[String], //null,
-  Notes: String, //"已开始收箱",
-  IMO: String, //"UN9234343",
-  INBUSINESSVOY: String, //"076WI",
-  OUTBUSINESSVOY: String, //"076W",
-  Inagent: String, //"COS",
-  Outagent: String //"COS"
+  ATD: Option[String], //null, // 有这个属性后，可以不在关注动态
+  Notes: Option[String], //"已开始收箱",
+  IMO: Option[String], //"UN9234343",
+  INBUSINESSVOY: Option[String], //"076WI",
+  OUTBUSINESSVOY: Option[String], //"076W",
+  Inagent: Option[String], //"COS",
+  Outagent: Option[String] //"COS"
 )
 
 object ScheduleInfo {

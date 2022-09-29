@@ -47,7 +47,7 @@ case class SubscribeVesselServiceLive(
               scheduleStatus = scheduleStatusReply.status.get
               scheduleStatusId <- scheduleStatusDao.save(scheduleStatus)
 
-              realVoyage = scheduleStatus.outVoya
+              realVoyage = scheduleStatus.outVoy
               shipmentId       <- shipmentDao.save(params.getQueryKey, params.vessel, realVoyage, params.wharf, scheduleStatusId)
               _                <- subscriptionDao.subscribe(user.id, shipmentId)
               status           <- scheduleStatusDao.findById(scheduleStatusId)

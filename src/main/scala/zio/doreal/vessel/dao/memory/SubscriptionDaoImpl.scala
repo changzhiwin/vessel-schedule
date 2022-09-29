@@ -42,6 +42,11 @@ case class SubscriptionDaoImpl(repo: Ref[List[Subscription]]) extends Subscripti
   } yield table.filter(row => row.shipmentId == shipmentId)
 
   def init(subscriptions: List[Subscription]): Task[Boolean] = repo.update(_ => subscriptions).map(_ => true)
+
+  def deleteByShipment(shipmentId: String): Task[Int] = for {
+    table <- repo.get
+    _     <- repo.update(_.filter(r => r.shipmentId != shipmentId))
+  } yield table.size
 }
 
 object SubscriptionDaoImpl {

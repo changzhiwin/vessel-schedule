@@ -28,15 +28,27 @@ object ScheduleStatusReply {
   }
 
   def transformToEntity(s: ScheduleInfo): ScheduleStatus = ScheduleStatus(
-      shipId = s.ShipId,
-      fullName = s.TheFullName,
-      inVoya = s.INBUSINESSVOY,
-      outVoya = s.OUTBUSINESSVOY,
+      terminalCode = s.TerminalCode,
+      shipCode = s.ShipId,
+      shipName = s.TheFullName,
+      company = s.LINEID,
+      imo = s.IMO,
+
+      inVoy = s.invoynbr,
+      outVoy = s.outvoynbr,
+      inService = s.InServiceId,
+      outService = s.OutServiceId,
+      inBusiVoy = s.INBUSINESSVOY,
+      outBusiVoy = s.OUTBUSINESSVOY,
+      inagent = s.Inagent,
+      outagent = s.Outagent,
+
+      eta = s.ETADate,
       pob = s.POB,
       etb = s.ETB,
       etd = s.ETD,
-      inAgent = s.Inagent,
-      outAgent = s.Outagent,
+      ata = s.ATA,
+      atd = s.ATD,
       notes = s.Notes)
 }
 
