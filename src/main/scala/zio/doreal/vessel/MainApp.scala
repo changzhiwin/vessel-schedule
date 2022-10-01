@@ -37,7 +37,7 @@ object MainApp extends ZIOAppDefault {
 
   def run = myApp.provide(
     AppConfig.live,
-    ServerConfig.live, //ServerConfig.live(ServerConfig.default.port(8090)), // TODO
+    serverConfLive,
     Client.default, 
     Scope.default, 
     Server.live, 
@@ -51,11 +51,14 @@ object MainApp extends ZIOAppDefault {
     ScheduleFetchServiceLive.live,
     FetchNewsService.live,
     PublishSubscriptService.live,
-    FileSourceService.live
+    FileSourceService.live,
+    // ZLayer.Debug.tree
   ) //.exitCode
 
-  val configApp = for {
-    config <- ZIO.service[AppConfig]
-    _ <- ZIO.log(s"${config}")
-  } yield ()
+  // custom zio.http.server config
+  val serverConfLive: ZLayer[AppConfig, Nothing, ServerConfig] = ZLayer {
+    for {
+      config <- ZIO.service[AppConfig]
+    } yield ServerConfig.default.port(config.bindPort)
+  }
 }
