@@ -10,12 +10,13 @@ case class SubscribeParams(
     vessel: String, 
     voyage: String, 
     wharf: String,
+    extraInfo: String, // some company information
     from: String,
     to: String) {
 
   def getQueryKey: String = s"[${vessel}/${voyage}/${wharf}]"
 
-  def getSubscribeInfo: String = s"[${vessel}/${voyage}]"
+  def getSubscribeInfo: String = s"[${vessel}/${voyage}] - [${extraInfo}]"
 
   def getUserWithOutId: User = User(id = "", openId = from, channel = channel, parent = to)
 
@@ -30,9 +31,10 @@ object SubscribeParams {
     val vessel = querys.get("vessel").map(_.head).getOrElse("-")
     val voyage = querys.get("voyage").map(_.head).getOrElse("-")
     val wharf = querys.get("wharf").map(_.head).getOrElse("CMG")
+    val extraInfo = querys.get("extraInfo").map(_.head).getOrElse("-")
     val from = querys.get("from").map(_.head).get
     val to   = querys.get("to").map(_.head).get
 
-    SubscribeParams("EMAIL", action, vessel, voyage, wharf, from, to)
+    SubscribeParams("EMAIL", action, vessel, voyage, wharf, extraInfo, from, to)
   }
 }

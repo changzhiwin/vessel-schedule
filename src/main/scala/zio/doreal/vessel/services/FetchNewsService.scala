@@ -40,14 +40,15 @@ object FetchNewsService {
         _          <- scheduleStatusReply.code match {
           case 0 => {
             val newStatus = scheduleStatusReply.status.get
-            if (newStatus.isNotChangeOrEnd(oldStatus)) {
+            val diffResult = oldStatus.isNotChangeOrEnd(newStatus)
+            if (diffResult._1) {
               // Notice: don't active needSync, because have not real changed
               shipmentDao.updateFetchTime(shipment) *> ZIO.unit
             } else {
               for {
                 statusId <- scheduleStatusDao.update(oldStatus.id, newStatus)
                 _ <- shipmentDao.updateTimeAndDetail(shipment, statusId)
-                _ <- publishSubscriptService.notify(shipment.id, statusId)
+                _ <- publishSubscriptService.notify(shipment.id, statusId, diffResult._2)
                 _ <- fileSourceService.needSync
               } yield ()
             }

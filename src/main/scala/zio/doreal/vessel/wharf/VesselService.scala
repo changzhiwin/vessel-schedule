@@ -27,29 +27,30 @@ object ScheduleStatusReply {
     case _ => new ScheduleStatusReply(code = -1, message = s"Find more than one schedules, please check your input. [${scheduleInfoReply.toJsonPretty}]")
   }
 
+  // TODO: 多个码头的情况，应该有下游组装好数据，给到上层
   def transformToEntity(s: ScheduleInfo): ScheduleStatus = ScheduleStatus(
       terminalCode = s.TerminalCode,
       shipCode = s.ShipId,
       shipName = s.TheFullName,
       company = s.LINEID,
-      imo = s.IMO,
+      imo = s.IMO.getOrElse("-"),
 
       inVoy = s.invoynbr,
       outVoy = s.outvoynbr,
-      inService = s.InServiceId,
-      outService = s.OutServiceId,
-      inBusiVoy = s.INBUSINESSVOY,
-      outBusiVoy = s.OUTBUSINESSVOY,
-      inagent = s.Inagent,
-      outagent = s.Outagent,
+      inService = s.InServiceId.getOrElse("-"),
+      outService = s.OutServiceId.getOrElse("-"),
+      inBusiVoy = s.INBUSINESSVOY.getOrElse("-"),
+      outBusiVoy = s.OUTBUSINESSVOY.getOrElse("-"),
+      inAgent = s.Inagent.getOrElse("-"),
+      outAgent = s.Outagent.getOrElse("-"),
 
-      eta = s.ETADate,
-      pob = s.POB,
-      etb = s.ETB,
-      etd = s.ETD,
-      ata = s.ATA,
-      atd = s.ATD,
-      notes = s.Notes)
+      eta = s.ETADate.getOrElse("-"),
+      pob = s.POB.getOrElse("-"),
+      etb = s.ETB.getOrElse("-"),
+      etd = s.ETD.getOrElse("-"),
+      ata = s.ATA.getOrElse("-"),
+      atd = s.ATD.getOrElse("-"),
+      notes = s.Notes.getOrElse("-"))
 }
 
 trait VesselService {

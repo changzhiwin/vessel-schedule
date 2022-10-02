@@ -7,37 +7,41 @@ case class ScheduleStatus(
     shipCode: String,              // ShipId
     shipName: String,              // TheFullName
     company: String,               // LINEID
-    imo: Option[String],           // IMO
+    imo: String,           // IMO
     inVoy: String,         // invoynbr
     outVoy: String,        // outvoynbr
 
-    inService: Option[String],     // InServiceId
-    outService: Option[String],    // OutServiceId
-    inBusiVoy: Option[String],     // INBUSINESSVOY
-    outBusiVoy: Option[String],    // OUTBUSINESSVOY
-    inagent: Option[String],       // Inagent
-    outagent: Option[String],      // Outagent
+    inService: String,     // InServiceId
+    outService: String,    // OutServiceId
+    inBusiVoy: String,     // INBUSINESSVOY
+    outBusiVoy: String,    // OUTBUSINESSVOY
+    inAgent: String,       // Inagent
+    outAgent: String,      // Outagent
 
-    eta: Option[String],           // ETADate
-    pob: Option[String],           // POB
-    etb: Option[String],           // ETB
-    etd: Option[String],           // ETD
-    ata: Option[String],           // ATA
-    atd: Option[String],           // ATD 有这个属性后，可以不在关注动态
+    eta: String,           // ETADate
+    pob: String,           // POB
+    etb: String,           // ETB
+    etd: String,           // ETD
+    ata: String,           // ATA
+    atd: String,           // ATD 有这个属性后，可以不在关注动态
 
-    notes: Option[String],         // Notes
+    notes: String,         // Notes
 
     // uuid, for relation mapping
     id: String = "") {
 
-  def isNotChangeOrEnd(newest: ScheduleStatus): Boolean = {
-    (eta == newest.eta) &&
-    (pob == newest.pob) &&
-    (etb == newest.etb) &&
-    (etd == newest.etd) &&
-    (ata == newest.ata) &&
-    (atd == newest.atd) &&
-    (notes == newest.notes) && atd.isEmpty
+  def isNotChangeOrEnd(newest: ScheduleStatus): (Boolean, String) = {
+    //val vesselInfo = s"${shipName}/${outVoy}" // [${vesselInfo}] - 
+
+    if (atd != newest.atd || atd != "-") {
+      (false, s"[ATD: ${newest.atd}]")
+    } else if (etd != newest.etd) {
+      (false, s"[ETD: ${newest.etd}]")
+    } else if (etb != newest.etb) {
+      (false, s"[ETB: ${newest.etb}]")
+    } else {
+      (true, "-")
+    }
   }
 }
 

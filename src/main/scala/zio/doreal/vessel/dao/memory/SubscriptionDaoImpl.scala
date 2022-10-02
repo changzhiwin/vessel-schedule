@@ -7,21 +7,22 @@ import zio.doreal.vessel.dao.SubscriptionDao
 case class SubscriptionDaoImpl(repo: Ref[List[Subscription]]) extends SubscriptionDao {
 
   //0 -> exist; 1 -> add
-  def subscribe(userId: String, shipmentId: String): Task[Int] = for {
+  def subscribe(userId: String, shipmentId: String, extraInfo: String): Task[Int] = for {
     table <- repo.get
-    added <- table.find(row => (row.userId == userId && row.shipmentId == shipmentId)) match {
-      case Some(_) => ZIO.succeed(0)
+    // 同一用户，同一水船，此时只能是不同的附带信息，例如不同的客户的货
+    added <- table.find(row => (row.userId == userId && row.shipmentId == shipmentId && row.extraInfo == extraInfo)) match {
+      case Some(sub) => ZIO.succeed(0)
       case None => for {
         id <- Random.nextUUID.map(_.toString())
-        _  <- repo.update(_.appended(Subscription(id, userId, shipmentId)))
+        _  <- repo.update(_.appended(Subscription(id, userId, shipmentId, extraInfo)))
       } yield (1)
     }
   } yield added
 
-  def unsubscribe(userId: String, shipmentId: String): Task[Int] = for {
+  def unsubscribe(userId: String, shipmentId: String, extraInfo: String): Task[Int] = for {
     added <- repo.modify(t => {
       val oldSize = t.size
-      val newTb = t.filter(row => (row.userId != userId || row.shipmentId != shipmentId))
+      val newTb = t.filter(row => (row.userId != userId || row.shipmentId != shipmentId || row.extraInfo != extraInfo))
       val newSize = newTb.size
       (oldSize - newSize, newTb)
     })

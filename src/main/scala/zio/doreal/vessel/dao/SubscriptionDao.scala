@@ -6,9 +6,9 @@ import zio.doreal.vessel.entities.{Subscription}
 trait SubscriptionDao {
 
   // -1 -> error; 0 -> exist; 1 -> add
-  def subscribe(userId: String, shipmentId: String): Task[Int]
+  def subscribe(userId: String, shipmentId: String, extraInfo: String): Task[Int]
 
-  def unsubscribe(userId: String, shipmentId: String): Task[Int]
+  def unsubscribe(userId: String, shipmentId: String, extraInfo: String): Task[Int]
 
   def noSubscriberExist(shipmentId: String): Task[Boolean]
 

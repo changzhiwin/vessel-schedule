@@ -7,6 +7,7 @@ import zio.http.model.{Headers}
 import zio.doreal.vessel.controls.vo.SubscribeParams
 import zio.doreal.vessel.controls.SubscribeVesselCtrl
 import zio.doreal.vessel.services.SubscribeVesselService
+import zio.doreal.vessel.basic.format.DefaultContent
 
 case class EmailSubscribeVesselCtrl(subscribeVesselService: SubscribeVesselService) extends SubscribeVesselCtrl {
 
@@ -24,9 +25,9 @@ case class EmailSubscribeVesselCtrl(subscribeVesselService: SubscribeVesselServi
         case "SUBSCRIBE"   => subscribeVesselService.subscribe(subParams)
         case "UNSUBSCRIBE" => subscribeVesselService.unsubscribe(subParams)
         case "ADMIN"       => subscribeVesselService.admin(subParams)
-        case _             => ZIO.succeed("Not support.")
+        case _             => ZIO.succeed(DefaultContent(message = "Not support."))
       }
-    } yield Response.text(content).updateHeaders(h => h ++ headers)
+    } yield Response.text(content.toHtml()).updateHeaders(h => h ++ headers)
   }
 }
 

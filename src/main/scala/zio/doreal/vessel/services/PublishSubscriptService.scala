@@ -7,10 +7,12 @@ import zio.http.model.{Headers, Method}
 import zio.doreal.vessel.AppConfig
 import zio.doreal.vessel.entities.User
 import zio.doreal.vessel.dao.{UserDao, SubscriptionDao, ScheduleStatusDao, ShipmentDao}
+import zio.doreal.vessel.basic.format.TypedContent
+import zio.doreal.vessel.services.format._
 
 trait PublishSubscriptService {
 
-  def notify(shipmentId: String, scheduleStatusId: String): ZIO[Any, Throwable, Unit]
+  def notify(shipmentId: String, scheduleStatusId: String, detail: String): ZIO[Any, Throwable, Unit]
 
   def start(): ZIO[Any, Throwable, Unit]
 
@@ -25,13 +27,13 @@ object PublishSubscriptService {
   case class PublishSubscriptServiceLive(
       config: AppConfig,
       client: Client,
-      queue: Queue[(String, String)], 
+      queue: Queue[(String, String, String)], 
       userDao: UserDao, 
       subscriptionDao: SubscriptionDao, 
       shipmentDao: ShipmentDao,
       scheduleStatusDao: ScheduleStatusDao) extends PublishSubscriptService {
 
-    def notify(shipmentId: String, scheduleStatusId: String): ZIO[Any, Throwable, Unit] = queue.offer(shipmentId -> scheduleStatusId) *> ZIO.unit
+    def notify(shipmentId: String, scheduleStatusId: String, detail: String): ZIO[Any, Throwable, Unit] = queue.offer( (shipmentId, scheduleStatusId, detail) ) *> ZIO.unit
 
     def start(): ZIO[Any, Throwable, Unit] = ZIO.whileLoop(true) {
       for {
@@ -41,13 +43,11 @@ object PublishSubscriptService {
         _ <- ZIO.foreachDiscard(subscribes) { sub =>
           for {
             user <- userDao.findById(sub.userId)
-
-            vesselInfo = s"${status.shipName}/${status.outVoy}"
             title <- status.atd match {
-              case None => ZIO.succeed(s"Update notify: [${vesselInfo}]")
-              case Some(atd) => ZIO.succeed(s"Last notify: [${vesselInfo}] - [ATD: ${atd}]")
+              case "-" => ZIO.succeed(s"Update notify: ${item._3}")
+              case _: String => ZIO.succeed(s"Finish notify: ${item._3}")
             }
-            _ <- pushToUser(user, title, status.toJsonPretty).debug("Notify result:")
+            _ <- pushToUser(user, title, SubscribeContent(status = Some(status), extraInfo = Some(sub.extraInfo))).debug("Notify result:")
           } yield ()
         }
         // check atd: if some, delete (all subscription /a shipment /a scheduleStatus)
@@ -56,26 +56,25 @@ object PublishSubscriptService {
           subscriptionDao.deleteByShipment(item._1) *> 
           shipmentDao.delete(item._1) *> 
           scheduleStatusDao.delete(item._2) 
-        ).when(status.atd.nonEmpty)
+        ).when(status.atd != "-")
       } yield ()
     } { _ => }
 
     def stop(): ZIO[Any, Throwable, Unit] = queue.shutdown
 
-    private def pushToUser(user: User, title: String, body: String): ZIO[Any, Throwable, String] = {
+    private def pushToUser(user: User, title: String, content: TypedContent): ZIO[Any, Throwable, String] = {
       val headers = Headers("X-Email-To", user.openId) ++ 
         Headers("X-Email-Bcc", "bebest@88.com") ++
         Headers("X-Email-From", user.parent) ++ 
         Headers("X-Email-Subject", title)
       for {
-        // Mock: "http://0.0.0.0:8090/notify-mock"
         url      <- ZIO.fromEither(URL.fromString(config.notifyUrl)).orDie
         response <- client.request(
             Request(
               method = Method.POST, 
               url = url, 
               headers = headers, 
-              body = Body.fromString(body)))   
+              body = Body.fromString(content.toHtml())))
         body <- response.body.asString  
       } yield body
     }
@@ -85,7 +84,7 @@ object PublishSubscriptService {
     for {
       config <- ZIO.service[AppConfig]
       client <- ZIO.service[Client]
-      queue <- Queue.bounded[(String, String)](100)
+      queue <- Queue.bounded[(String, String, String)](100)
       userDao <-  ZIO.service[UserDao]
       subscription <- ZIO.service[SubscriptionDao]
       shipmentDao <- ZIO.service[ShipmentDao]
