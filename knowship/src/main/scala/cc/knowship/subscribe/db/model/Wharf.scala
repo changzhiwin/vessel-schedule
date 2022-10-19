@@ -8,6 +8,7 @@ final case class Wharf(
   id: UUID,
   name: String,
   code: String,   // 简写代码
+  website: String,
   
   createAt: Long,
 )

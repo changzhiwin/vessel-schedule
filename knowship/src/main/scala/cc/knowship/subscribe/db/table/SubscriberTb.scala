@@ -35,7 +35,7 @@ final case class SubscriberTbLive(
     now    <- Clock.currentTime(TimeUnit.MILLISECONDS)
 
     subscriber = Subscriber(id, openId, source, receiver, nickname, now, now)
-    _ <- run(query[Subscriber].insertValue(lift(subscriber))/*.returning(r => r)*/).implicitly
+    _ <- run(query[Subscriber].insertValue(lift(subscriber))).implicitly /*.returning(r => r) Not support by sqlite*/
   } yield subscriber
 
   def get(id: UUID): Task[Option[Subscriber]] = 

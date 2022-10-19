@@ -3,7 +3,7 @@ import Dependencies._
 
 lazy val root = (project in file("."))
   .settings(stdSettings("root"))
-  .settings(publishSetting(false))
+  //.settings(publishSetting(false))
   .aggregate(
     knowship,
   )
