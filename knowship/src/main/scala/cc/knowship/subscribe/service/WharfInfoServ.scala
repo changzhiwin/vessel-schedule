@@ -12,12 +12,12 @@ trait WharfInfoServ {
     * @param voyageChoose 为空或者不配输入的场次，则尝试使用最新的航次
     * @return 返回正确的航次代码
     */
-  def voyageOfVessel(vesselName: String, voyageChoose: Option[String]): Task[Option[String]]
+  def voyageOfVessel(vesselName: String, voyageChoose: Option[String]): Task[String]
 
   /**
     * 正确船名、航次，用于更新
     * @param vesselName
     * @param voyageCode
     */
-  def voyageStatus(vesselName: String, voyageCode: String): Task[Voyage]
+  def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)]
 }

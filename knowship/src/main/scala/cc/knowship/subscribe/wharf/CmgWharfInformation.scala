@@ -4,53 +4,61 @@ import zio._
 import zio.json._
 import zio.http.{Client, Request, URL}
 
+import cc.knowship.subscribe.SubscribeException
+import cc.knowship.subscribe.util.Constants
 import cc.knowship.subscribe.service.WharfInfoServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
 case class CmgWharfInformation(client: Client) extends WharfInfoServ {
 
+  import SubscribeException._
+
   lazy val VesselAPI = URL.fromString("http://eportapisct.scctcn.com/api/GVesselVoyage")
 
   lazy val VoyageAPI = URL.fromString("http://eportapisct.scctcn.com/api/VesselSchedule")
 
-  override def voyageOfVessel(vesselName: String, voyageChoose: Option[String]): Task[Option[String]] = for {
-    url      <- ZIO.fromEither(VesselAPI).mapError(m => new Throwable(m))
+  override def voyageOfVessel(vesselName: String, voyageChoose: Option[String]): Task[String] = for {
+    url      <- ZIO.fromEither(VesselAPI)
+                   .mapError(m => new URLParseFailed(s"$m"))
     response <- client.request(Request(url = url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
     body     <- response.body.asString
-    voReply  <- ZIO.fromEither(body.fromJson[VoyageReply].mapError(m => new Throwable(m)))
-  } yield chooseVoyage(voReply.InnerList)
-
-  private def chooseVoyage(voyageList: List[VoyageDetail]): Option[String] = {
-    voyageList match {
-      case Nil          => None
-      case only :: Nil  => Some(only.OutBoundVoy) 
-      case head :: tail => if (tail.exists(v => v.OutBoundVoy == voyageChoose)) voyageChoose else head.OutBoundVoy
-    }
-  }
+    voReply  <- ZIO.fromEither(body.fromJson[VoyageReply])
+                   .mapError(_ => JsonDecodeFailed("VoyageReply"))
+    voyage   <- ZIO.fromEither( chooseVoyage(voReply.InnerList, voyageChoose) )
+  } yield voyage
 
   override def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)] = for {
-    url      <- ZIO.fromEither(VoyageAPI).mapError(m => new Throwable(m))
+    url      <- ZIO.fromEither(VoyageAPI)
+                   .mapError(m => new URLParseFailed(s"$m"))
     response <- client.request(Request(url = url.setQueryParams(s"FullName=${vesselName}&vesselName=${vesselName}&OutboundVoy=${voyageCode}&PageIndex=1&PageSize=30")))
     body     <- response.body.asString
-    schReply <- ZIO.fromEither(body.fromJson[ScheduleInfoReply]).mapError(m => new Throwable(m))
-  } yield buildModels(schReply.InnerList)
+    schReply <- ZIO.fromEither(body.fromJson[ScheduleInfoReply])
+                   .mapError(_ => JsonDecodeFailed("ScheduleInfoReply"))
+    result   <- ZIO.fromEither(buildModels(schReply.InnerList))
+  } yield result
 
-  private def buildModels(scheduleList: List[ScheduleInfo]): Option[(Vessel, Voyage)] = {
+  private def buildModels(scheduleList: List[ScheduleInfo]): Either[SubscribeException, (Vessel, Voyage)] = {
     scheduleList match {
-      case head :: Nil => 
-      case _           => None
+      case head :: Nil => Right( formatModels(head) )
+      // size = 0 或者 size >= 2 都是错误的
+      case _           => Left( VoyageMustOnlyOne(s"ScheduleInfo list size should 1, but ${scheduleList.size}") )
     }
   }
 
   private def formatModels(scheduleInfo: ScheduleInfo): (Vessel, Voyage) = {
-    Vessel(
+    val s = scheduleInfo
+
+    val vessel = Vessel(
       shipCode = s.ShipId,
       shipName = s.TheFullName,
       company = s.LINEID,
-      imo = s.IMO.getOrElse("-")
-    )
+      imo = s.IMO.getOrElse("-"),
 
-    Voyage(
+      id = Constants.DEFAULT_UUID,
+      wharfId = Constants.DEFAULT_UUID,
+      createAt = Constants.DEFAULT_EPOCH_MILLI,
+    )
+    val voyage = Voyage(
       terminalCode = s.TerminalCode,
       inVoy = s.invoynbr,
       outVoy = s.outvoynbr,
@@ -67,15 +75,38 @@ case class CmgWharfInformation(client: Client) extends WharfInfoServ {
       etd = s.ETD.getOrElse("-"),
       ata = s.ATA.getOrElse("-"),
       atd = s.ATD.getOrElse("-"),
-      notes = s.Notes.getOrElse("-")
+      notes = s.Notes.getOrElse("-"),
+
+      id = Constants.DEFAULT_UUID,
+      vesselId = Constants.DEFAULT_UUID,
+      createAt = Constants.DEFAULT_EPOCH_MILLI,
+      updateAt = Constants.DEFAULT_EPOCH_MILLI,
     )
 
+    (vessel, voyage)
+  }
+
+  private def chooseVoyage(voyageList: List[VoyageDetail], voyageChoose: Option[String]): Either[SubscribeException, String] = {
+    val voaygeVal = voyageChoose.getOrElse("-")
+    voyageList match {
+      case Nil          => Left( VesselNoVoyageFound(s"voyageList is empty, with name #${voaygeVal}") )
+      case only :: Nil  => Right(only.OutBoundVoy) 
+      case head :: tail => Right( if (tail.exists(v => v.OutBoundVoy == voaygeVal)) voaygeVal else head.OutBoundVoy )
+    }
   }
 }
 
 case class VoyageDetail(TerminalCode: String, OutBoundVoy: String, InBoundVoy: String)
 
+object VoyageDetail {
+  implicit val codec: JsonCodec[VoyageDetail] = DeriveJsonCodec.gen
+}
+
 case class VoyageReply(InnerList: List[VoyageDetail], TotalPages: Int, TotalCount: Int, PageIndex: Int, PageSize: Int)
+
+object VoyageReply {
+  implicit val codec: JsonCodec[VoyageReply] = DeriveJsonCodec.gen
+}
 
 case class ScheduleInfo(
   TerminalCode: String, //"CCT",
@@ -101,4 +132,12 @@ case class ScheduleInfo(
   Outagent: Option[String] //"COS"
 )
 
+object ScheduleInfo {
+  implicit val codec: JsonCodec[ScheduleInfo] = DeriveJsonCodec.gen
+}
+
 case class ScheduleInfoReply(InnerList: List[ScheduleInfo], TotalPages: Int, TotalCount: Int, PageIndex: Int, PageSize: Int)
+
+object ScheduleInfoReply {
+  implicit val codec: JsonCodec[ScheduleInfoReply] = DeriveJsonCodec.gen
+}
