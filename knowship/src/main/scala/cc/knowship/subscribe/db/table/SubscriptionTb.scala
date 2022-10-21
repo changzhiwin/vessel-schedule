@@ -15,6 +15,8 @@ trait SubscriptionTb {
 
   def create(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription]
 
+  def updateOrCreate(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription]
+
   def get(id: UUID): Task[Subscription]
 
   def delete(id: UUID): Task[Unit]
@@ -24,17 +26,32 @@ trait SubscriptionTb {
 
 final case class SubscriptionTbLive(
   dataSource: DataSource
-) extends SubscriptionTb {
+) extends SubscriptionTb { self =>
   
   import QuillContext._
   implicit val env = Implicit(dataSource)
 
   def create(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription] = for {
-    id     <- Random.nextUUID
-    now    <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    id  <- Random.nextUUID
+    now <- Clock.currentTime(TimeUnit.MILLISECONDS)
 
     subscription = Subscription(id, subscriberId, voyageId, infos, now, now)
-    _ <- run(query[Subscription].insertValue(lift(subscription))).implicitly
+    _   <- run(query[Subscription].insertValue(lift(subscription))).implicitly
+  } yield subscription
+
+  def updateOrCreate(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription] = for {
+    recordOpt    <- run(query[Subscription].filter(s => s.subscriberId == lift(subscriberId) && s.voyageId == lift(voyageId))).map(_.headOption).implicitly
+    now       <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    subscription <- ZIO.fromOption(recordOpt).foldZIO(
+      notFound => self.create(subscriberId, voyageId, infos),
+      valFound => {
+        run(
+          query[Subscription]
+            .filter(_.id == lift(valFound.id))
+            .update(_.infos -> lift(infos))
+        ).implicitly *> ZIO.succeed(valFound.copy(infos = infos))
+      }
+    )
   } yield subscription
 
   def get(id: UUID): Task[Subscription] =

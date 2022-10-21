@@ -6,10 +6,10 @@ import zio.http.{Client, Request, URL}
 
 import cc.knowship.subscribe.SubscribeException
 import cc.knowship.subscribe.util.Constants
-import cc.knowship.subscribe.service.WharfInfoServ
+import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
-case class CmgWharfInformation(client: Client) extends WharfInfoServ {
+case class CmgWharfInformation(client: Client) extends WharfInformationServ {
 
   import SubscribeException._
 
@@ -17,14 +17,14 @@ case class CmgWharfInformation(client: Client) extends WharfInfoServ {
 
   lazy val VoyageAPI = URL.fromString("http://eportapisct.scctcn.com/api/VesselSchedule")
 
-  override def voyageOfVessel(vesselName: String, voyageChoose: Option[String]): Task[String] = for {
+  override def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = for {
     url      <- ZIO.fromEither(VesselAPI)
                    .mapError(m => new URLParseFailed(s"$m"))
     response <- client.request(Request(url = url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
     body     <- response.body.asString
     voReply  <- ZIO.fromEither(body.fromJson[VoyageReply])
                    .mapError(_ => JsonDecodeFailed("VoyageReply"))
-    voyage   <- ZIO.fromEither( chooseVoyage(voReply.InnerList, voyageChoose) )
+    voyage   <- ZIO.fromEither( chooseVoyage(voReply.InnerList, voyageName) )
   } yield voyage
 
   override def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)] = for {
@@ -39,13 +39,13 @@ case class CmgWharfInformation(client: Client) extends WharfInfoServ {
 
   private def buildModels(scheduleList: List[ScheduleInfo]): Either[SubscribeException, (Vessel, Voyage)] = {
     scheduleList match {
-      case head :: Nil => Right( formatModels(head) )
+      case head :: Nil => Right( formatingModels(head) )
       // size = 0 或者 size >= 2 都是错误的
-      case _           => Left( VoyageMustOnlyOne(s"ScheduleInfo list size should 1, but ${scheduleList.size}") )
+      case _           => Left( VoyageMustOnlyOne(s"ScheduleInfoList = ${scheduleList.map(_.outvoynbr).mkString("[", ",", "]")}") )
     }
   }
 
-  private def formatModels(scheduleInfo: ScheduleInfo): (Vessel, Voyage) = {
+  private def formatingModels(scheduleInfo: ScheduleInfo): (Vessel, Voyage) = {
     val s = scheduleInfo
 
     val vessel = Vessel(
@@ -86,12 +86,11 @@ case class CmgWharfInformation(client: Client) extends WharfInfoServ {
     (vessel, voyage)
   }
 
-  private def chooseVoyage(voyageList: List[VoyageDetail], voyageChoose: Option[String]): Either[SubscribeException, String] = {
-    val voaygeVal = voyageChoose.getOrElse("-")
+  private def chooseVoyage(voyageList: List[VoyageDetail], voyageName: String): Either[SubscribeException, String] = {
     voyageList match {
-      case Nil          => Left( VesselNoVoyageFound(s"voyageList is empty, with name #${voaygeVal}") )
+      case Nil          => Left( VesselNoVoyageFound(s"voyageList is empty, with name #${voyageName}") )
       case only :: Nil  => Right(only.OutBoundVoy) 
-      case head :: tail => Right( if (tail.exists(v => v.OutBoundVoy == voaygeVal)) voaygeVal else head.OutBoundVoy )
+      case head :: tail => Right( if (tail.exists(v => v.OutBoundVoy == voyageName)) voyageName else head.OutBoundVoy )
     }
   }
 }

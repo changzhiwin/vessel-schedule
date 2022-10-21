@@ -5,15 +5,15 @@ import java.util.concurrent.TimeUnit
 import zio._
 
 import cc.knowship.subscribe.util.{Constants, TimeDateUtils}
-import cc.knowship.subscribe.service.WharfInfoServ
+import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
-case class FakeWharfInformation() extends WharfInfoServ {
+case class FakeWharfInformation() extends WharfInformationServ {
 
-  def voyageOfVessel(vesselName: String, voyageChoose: Option[String]): Task[String] = {
-    val code = voyageChoose match {
-      case Some(v) => s"${v}-ok"
-      case None    => "lastest"
+  def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = {
+    val code = voyageName match {
+      case "-" => "lastest"
+      case s: String    => s
     }
     ZIO.succeed(code)
   }
@@ -31,6 +31,7 @@ case class FakeWharfInformation() extends WharfInfoServ {
     )
 
     val dateTimeStr = TimeDateUtils.currentLocalDateTimeStr
+    val fakeTimeStr = "2022-10-10 10:00:00"
 
     val voyage = Voyage(
       terminalCode = "terminalCode",
@@ -45,10 +46,10 @@ case class FakeWharfInformation() extends WharfInfoServ {
 
       eta = dateTimeStr,
       pob = dateTimeStr,
-      etb = dateTimeStr,
-      etd = dateTimeStr,
+      etb = fakeTimeStr,
+      etd = fakeTimeStr,
       ata = dateTimeStr,
-      atd = dateTimeStr,
+      atd = fakeTimeStr,
       notes = "notes",
 
       id = Constants.DEFAULT_UUID,
@@ -73,8 +74,13 @@ case class FakeWharfInformation() extends WharfInfoServ {
       (vessel, updatedVoyage)
     }
   }
-
 }
+
+/*
+object FakeWharfInformation {
+  val layer = ZLayer.succeed(new FakeWharfInformation())
+}
+*/
 
 sealed trait CareAttribute
 

@@ -15,6 +15,8 @@ trait VoyageTb {
 
   def create(voyageBare: Voyage, vesselId: UUID): Task[Voyage]
 
+  def updateOrCreate(voyageBare: Voyage, vesselId: UUID): Task[Voyage]
+
   def get(id: UUID): Task[Voyage]
 
   def delete(id: UUID): Task[Unit]
@@ -24,7 +26,7 @@ trait VoyageTb {
 
 final case class VoyageTbLive(
   dataSource: DataSource
-) extends VoyageTb {
+) extends VoyageTb { self =>
   
   import QuillContext._
   implicit val env = Implicit(dataSource)
@@ -35,6 +37,22 @@ final case class VoyageTbLive(
 
     voyage = voyageBare.copy(id = id, vesselId = vesselId, createAt = now, updateAt = now)
     _ <- run(query[Voyage].insertValue(lift(voyage))).implicitly
+  } yield voyage
+
+  def updateOrCreate(voyageBare: Voyage, vesselId: UUID): Task[Voyage] = for {
+    recordOpt <- run(query[Voyage].filter(s => s.outVoy == lift(voyageBare.outVoy) && s.vesselId == lift(vesselId))).map(_.headOption).implicitly
+    now       <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    voyage    <- ZIO.fromOption(recordOpt).foldZIO(
+      notFound => self.create(voyageBare, vesselId),
+      valFound => {
+        val voyageObj = voyageBare.copy(id = valFound.id, vesselId = vesselId, createAt = valFound.createAt, updateAt = now)
+        run(
+          query[Voyage]
+            .filter(_.id == lift(valFound.id))
+            .updateValue(lift(voyageObj))
+        ).implicitly *> ZIO.succeed(voyageObj)
+      }
+    )
   } yield voyage
 
   def get(id: UUID): Task[Voyage] =

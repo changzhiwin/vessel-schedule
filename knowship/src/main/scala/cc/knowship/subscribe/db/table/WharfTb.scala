@@ -13,11 +13,15 @@ import cc.knowship.subscribe.db.model.Wharf
 
 trait WharfTb {
 
-  def create(name: String, code: String, website: Option[String]): Task[Wharf]
+  def create(name: String, code: String, website: String): Task[Wharf]
 
   def findByCode(code: String): Task[Wharf]
 
   def all: Task[List[Wharf]]
+
+  def get(id: UUID): Task[Wharf]
+
+  def delete(id: UUID): Task[Unit]
 
 }
 
@@ -28,11 +32,11 @@ final case class WharfTbLive(
   import QuillContext._
   implicit val env = Implicit(dataSource)
 
-  def create(name: String, code: String, website: Option[String]): Task[Wharf] = for {
+  def create(name: String, code: String, website: String): Task[Wharf] = for {
     id     <- Random.nextUUID
     now    <- Clock.currentTime(TimeUnit.MILLISECONDS)
 
-    wharf = Wharf(id, name, code, website.getOrElse("-"), now)
+    wharf = Wharf(id, name, code, website, now)
     _ <- run(query[Wharf].insertValue(lift(wharf))).implicitly
   } yield wharf
 
@@ -46,6 +50,15 @@ final case class WharfTbLive(
     .implicitly
 
   def all: Task[List[Wharf]] = run(query[Wharf]).implicitly
+
+  def get(id: UUID): Task[Wharf] = 
+    run(query[Wharf].filter(_.id == lift(id)))
+      .map(_.headOption)
+      .someOrFail(DbRecordNotFound(s"Wharf#id ${id.toString}"))
+      .implicitly
+
+  def delete(id: UUID): Task[Unit] = 
+    run(query[Wharf].filter(_.id == lift(id)).delete).implicitly *> ZIO.unit
 
 }
 

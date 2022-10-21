@@ -5,14 +5,15 @@ import java.util.UUID
 import zio._
 import zio.http.html._
 
+import cc.knowship.subscribe.SubscribeException._
 import cc.knowship.subscribe.db.model.Subscription
 import cc.knowship.subscribe.db.table._
-import cc.knowship.subscribe.service.WharfInfoServ
+import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.util.EmailTemplate
 
 trait SubscribeServ {
 
-  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: Option[String], infos: String): Task[Subscription] 
+  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[Subscription] 
 
   def registeViewHtml(subscription: Subscription): Task[Html]
 
@@ -24,18 +25,20 @@ case class SubscribeServLive(
   vesselTb: VesselTb,
   voyageTb: VoyageTb,
   subscriptionTb: SubscriptionTb,
-  wharfInfoServ: WharfInfoServ
+  wharfInformationServ: Map[String, WharfInformationServ]
 ) extends SubscribeServ {
 
-  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: Option[String], infos: String): Task[Subscription] = for {
-    wharf          <- wharfTb.findByCode(wharfCode)
-    // TODO, 根据wharf使用不同的服务
-    selectedVoy    <- wharfInfoServ.voyageOfVessel(vessel, voyage)
-    voyaStatus     <- wharfInfoServ.voyageStatus(vessel, selectedVoy)
-    // TODO, 完全一样的提交，考虑findOrCreate
-    vesselObj      <- vesselTb.create(voyaStatus._1, wharf.id)
-    voyageObj      <- voyageTb.create(voyaStatus._2, vesselObj.id)
-    subscription   <- subscriptionTb.create(subscriberId, voyageObj.id, infos)
+  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[Subscription] = for {
+    wharf        <- wharfTb.findByCode(wharfCode)
+    wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code))
+                       .mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
+
+    selectedVoy  <- wharfInfServ.voyageOfVessel(vessel, voyage)
+    voyaStatus   <- wharfInfServ.voyageStatus(vessel, selectedVoy)
+
+    vesselObj    <- vesselTb.findOrCreate(voyaStatus._1, wharf.id).debug("vesselObj: ")
+    voyageObj    <- voyageTb.updateOrCreate(voyaStatus._2, vesselObj.id).debug("voyageObj: ")
+    subscription <- subscriptionTb.updateOrCreate(subscriberId, voyageObj.id, infos).debug("subscription: ")
   } yield subscription
 
   def registeViewHtml(subscription: Subscription): Task[Html]= for {

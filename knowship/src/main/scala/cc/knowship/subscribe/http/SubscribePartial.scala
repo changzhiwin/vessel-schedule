@@ -27,7 +27,7 @@ case class SubscribePartialLive(subscriberServ: SubscriberServ, subscribeServ: S
         body         <- req.body.asString
         form         <- ZIO.fromEither(body.fromJson[SubscribeForm]).mapError(e => new Throwable(e))
         subscriber   <- subscriberServ.findOrCreate(form.openId, form.source, form.receiver, form.nicknameValue)
-        subscription <- subscribeServ.registe(subscriber.id, form.wharfCode, form.vessel, form.voyage, form.infosValue)
+        subscription <- subscribeServ.registe(subscriber.id, form.wharfCode, form.vessel, form.voyageValue, form.infosValue)
         content      <- subscribeServ.registeViewHtml(subscription)
       } yield Response.html(content).updateHeaders(h => h ) // TODO ++ headers
 
@@ -63,6 +63,7 @@ final case class SubscribeForm(
   }
   def wharfCode: String = wharf.getOrElse("FAKE")
   def infosValue: String = infos.getOrElse("-")
+  def voyageValue: String = voyage.getOrElse("-")
 }
 
 object SubscribeForm {

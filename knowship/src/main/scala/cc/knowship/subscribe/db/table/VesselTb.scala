@@ -15,6 +15,8 @@ trait VesselTb {
 
   def create(vesselBare: Vessel, wharfId: UUID): Task[Vessel]
 
+  def findOrCreate(vesselBare: Vessel, wharfId: UUID): Task[Vessel]
+
   def get(id: UUID): Task[Vessel]
 
   def delete(id: UUID): Task[Unit]
@@ -22,7 +24,7 @@ trait VesselTb {
 
 final case class VesselTbLive(
   dataSource: DataSource
-) extends VesselTb {
+) extends VesselTb { self =>
   
   import QuillContext._
   implicit val env = Implicit(dataSource)
@@ -35,14 +37,20 @@ final case class VesselTbLive(
     _ <- run(query[Vessel].insertValue(lift(vessel))).implicitly
   } yield vessel
 
+  def findOrCreate(vesselBare: Vessel, wharfId: UUID): Task[Vessel] =
+    run(query[Vessel].filter(s => s.shipCode == lift(vesselBare.shipCode) && s.shipName == lift(vesselBare.shipName)))
+      .map(_.headOption)
+      .implicitly
+      .someOrElseZIO(self.create(vesselBare, wharfId))
+
   def get(id: UUID): Task[Vessel] =
     run(
       query[Vessel]
         .filter(s => s.id == lift(id))
     )
-    .map(_.headOption)
-    .someOrFail(DbRecordNotFound(s"Vessel#id ${id}"))
-    .implicitly
+      .map(_.headOption)
+      .someOrFail(DbRecordNotFound(s"Vessel#id ${id}"))
+      .implicitly
 
   def delete(id: UUID): Task[Unit] =
     run(
