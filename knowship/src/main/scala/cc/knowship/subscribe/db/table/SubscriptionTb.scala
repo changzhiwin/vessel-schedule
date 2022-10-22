@@ -22,6 +22,10 @@ trait SubscriptionTb {
   def delete(id: UUID): Task[Unit]
 
   def nonVoyageExist(voyageId: UUID): Task[Boolean]
+
+  def findByVoyage(voyageId: UUID): Task[List[Subscription]]
+
+  def findByExpiredPeriod(timestamp: Long): Task[List[Subscription]]
 }
 
 final case class SubscriptionTbLive(

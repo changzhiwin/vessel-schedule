@@ -29,7 +29,7 @@ lazy val knowship = (project in file("knowship"))
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
       `zio`, `zio-test`, `zio-test-sbt`, 
-      `zio-http`, `zio-json`,
+      `zio-http`, `zio-json`, `zio-streams`,
       `quill-jdbc-zio`, `sqlite-jdbc`,
     ),
   )

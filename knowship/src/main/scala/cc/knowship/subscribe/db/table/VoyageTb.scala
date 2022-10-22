@@ -22,6 +22,10 @@ trait VoyageTb {
   def delete(id: UUID): Task[Unit]
 
   def nonVesselExist(vesselId: UUID): Task[Boolean]
+
+  def findByExpiredPeriod(timestamp: Long): Task[List[Voyage]]
+
+  def shouldNotifyTheChange(id: UUID, voyageBare: Voyage): Task[Boolean]
 }
 
 final case class VoyageTbLive(
