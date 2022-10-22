@@ -8,4 +8,8 @@ object Constants {
 
   lazy val DEFAULT_EPOCH_MILLI: Long = 0L
 
+  lazy val DEFAULT_STRING_VALUE: String = "-"
+
+  lazy val DEFAULT_WHARF_CODE: String = "FAKE"
+
 }

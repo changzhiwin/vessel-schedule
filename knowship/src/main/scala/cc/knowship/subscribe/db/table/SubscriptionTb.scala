@@ -25,7 +25,7 @@ trait SubscriptionTb {
 
   def findByVoyage(voyageId: UUID): Task[List[Subscription]]
 
-  def findByExpiredPeriod(timestamp: Long): Task[List[Subscription]]
+  // def findByExpiredNotify(timestamp: Long): Task[List[Subscription]]
 }
 
 final case class SubscriptionTbLive(
@@ -75,11 +75,19 @@ final case class SubscriptionTbLive(
     ).implicitly *> ZIO.unit
 
   def nonVoyageExist(voyageId: UUID): Task[Boolean] =
+    self.findByVoyage(voyageId).map(_.isEmpty)
+
+  def findByVoyage(voyageId: UUID): Task[List[Subscription]] =
     run(
       query[Subscription].filter(s => s.voyageId == lift(voyageId)) 
-    )
-    .map(_.isEmpty)
-    .implicitly
+    ).implicitly 
+
+  /*
+  def findByExpiredNotify(timestamp: Long): Task[List[Subscription]]
+    run(
+      query[Subscription].filter(s => s.notifyAt < lift(timestamp))
+    ).implicitly 
+  */
 }
 
 object SubscriptionTbLive {

@@ -4,13 +4,11 @@ import zio._
 import zio.stream._
 
 import cc.knowship.subscribe.db.model.{Subscription}
-//import cc.knowship.subscribe.db.table.{VoyageTb, SubscriptionTb, VesselTb, WharfTb}
+import cc.knowship.subscribe.service.SubscribeServ
 
-case class NotifySink() {
-
-  def consume: ZSink[Any, Exception, Subscription, Nothing, Unit] = ZSink.foreach { subscription =>
-    Console.printLine(s">>>Notify: ${subscription.id}, ${subscription.infos}")
-  }
+case class NotifySink(subscribeServ: SubscribeServ) {
+  
+  def consume: ZSink[Any, Throwable, Subscription, Nothing, Unit] = ZSink.foreach(sub => subscribeServ.pushUpdate(sub))
 }
 
 object NotifySink {

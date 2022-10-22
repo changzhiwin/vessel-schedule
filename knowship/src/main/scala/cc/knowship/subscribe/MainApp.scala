@@ -8,7 +8,7 @@ import cc.knowship.subscribe.db.QuillContext
 import cc.knowship.subscribe.db.table.{SubscriberTbLive, SubscriptionTbLive, VesselTbLive, VoyageTbLive, WharfTbLive}
 import cc.knowship.subscribe.http._ //{SubscriberPartial, SubscriberPartialLive}
 import cc.knowship.subscribe.service._
-//import cc.knowship.subscribe.wharf.FakeWharfInformation
+import cc.knowship.subscribe.scheduler._
 
 object MainApp extends ZIOAppDefault {
 
@@ -16,6 +16,7 @@ object MainApp extends ZIOAppDefault {
     subscriber <- SubscriberPartial.routes
     subscribe  <- SubscribePartial.routes
     wharf      <- WharfPartial.routes
+    _          <- FixScheduleStream.start(30.seconds)
 
     http = Http.collectZIO[Request] { subscribe.orElse(wharf).orElse(subscriber) }
     _ <- Server.serve(http @@ Middleware.beautifyErrors)
@@ -42,5 +43,11 @@ object MainApp extends ZIOAppDefault {
     SubscribeServLive.layer,
     SubscriberServLive.layer,
     WharfInformationServ.layer,
+
+    // scheduler
+    FixScheduleStream.layer,
+    CheckExpiredPipeline.layer,
+    FetchNewsPipeline.layer,
+    NotifySink.layer,
   )
 }
