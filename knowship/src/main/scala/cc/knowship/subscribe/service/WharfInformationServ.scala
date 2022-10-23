@@ -28,6 +28,16 @@ trait WharfInformationServ {
 object WharfInformationServ {
 
   val layer: ZLayer[Client, Nothing, Map[String, WharfInformationServ]] = {
+    /*
+    ZLayer.succeedEnvironment {
+      ZEnvironment(
+        Map(
+          "FAKE" -> FakeWharfInformation(),
+          "CMG"  -> CmgWharfInformation()
+        )
+      )
+    }
+    */
     ZLayer.fromZIOEnvironment {
       for {
         client <- ZIO.service[Client]

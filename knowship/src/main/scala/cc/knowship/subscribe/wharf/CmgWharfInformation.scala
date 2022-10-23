@@ -20,7 +20,9 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
   override def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = for {
     url      <- ZIO.fromEither(VesselAPI)
                    .mapError(m => new URLParseFailed(s"$m"))
-    response <- client.request(Request(url = url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
+    // client.0request(Request(url = url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
+
+    response <- client.request(Request.get(url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
     body     <- response.body.asString
     voReply  <- ZIO.fromEither(body.fromJson[VoyageReply])
                    .mapError(_ => JsonDecodeFailed("VoyageReply"))
@@ -30,7 +32,9 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
   override def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)] = for {
     url      <- ZIO.fromEither(VoyageAPI)
                    .mapError(m => new URLParseFailed(s"$m"))
-    response <- client.request(Request(url = url.setQueryParams(s"FullName=${vesselName}&vesselName=${vesselName}&OutboundVoy=${voyageCode}&PageIndex=1&PageSize=30")))
+    // client.0request(Request(url = url.setQueryParams(s"FullName=${vesselName}&vesselName=${vesselName}&OutboundVoy=${voyageCode}&PageIndex=1&PageSize=30")))
+    
+    response <- client.request(Request.get(url.setQueryParams(s"FullName=${vesselName}&vesselName=${vesselName}&OutboundVoy=${voyageCode}&PageIndex=1&PageSize=30")))
     body     <- response.body.asString
     schReply <- ZIO.fromEither(body.fromJson[ScheduleInfoReply])
                    .mapError(_ => JsonDecodeFailed("ScheduleInfoReply"))
