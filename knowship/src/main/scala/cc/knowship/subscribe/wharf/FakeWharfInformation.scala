@@ -31,7 +31,6 @@ case class FakeWharfInformation() extends WharfInformationServ {
     )
 
     val dateTimeStr = TimeDateUtils.currentLocalDateTimeStr
-    val fakeTimeStr = "2022-10-10 10:00:00"
 
     val voyage = Voyage(
       terminalCode = "terminalCode",
@@ -46,10 +45,10 @@ case class FakeWharfInformation() extends WharfInformationServ {
 
       eta = dateTimeStr,
       pob = dateTimeStr,
-      etb = fakeTimeStr,
-      etd = fakeTimeStr,
+      etb = Constants.DEFAULT_STRING_VALUE,
+      etd = Constants.DEFAULT_STRING_VALUE,
       ata = dateTimeStr,
-      atd = fakeTimeStr,
+      atd = Constants.DEFAULT_STRING_VALUE,
       notes = "notes",
 
       id = Constants.DEFAULT_UUID,
@@ -59,7 +58,7 @@ case class FakeWharfInformation() extends WharfInformationServ {
     )
 
     for {
-      attr <- Random.nextIntBetween(0, 4).map(CareAttribute.apply(_))
+      attr <- Random.nextIntBetween(0, 3).map(CareAttribute.apply(_))
       now   <- Clock.currentTime(TimeUnit.MILLISECONDS)
     } yield {
       val timeStr = TimeDateUtils.epochMilliToString(now)

@@ -33,6 +33,15 @@ trait VoyageTb {
   def findByShipNameAndOutVoy(shipName: String, outVoy: String): Task[Option[(Vessel, Voyage)]]
 }
 
+object VoyageTb {
+
+  def isChanged(vAged: Voyage, vNew: Voyage): Boolean = {
+    if (vNew.atd != vAged.atd || vNew.etd != vAged.etd || vNew.etb != vAged.etb) true else false
+  }
+
+  def isFinished(vNew: Voyage): Boolean = vNew.atd != Constants.DEFAULT_STRING_VALUE
+}
+
 final case class VoyageTbLive(
   dataSource: DataSource
 ) extends VoyageTb { self =>
@@ -60,17 +69,6 @@ final case class VoyageTbLive(
       .map(_.headOption)
       .implicitly
       .someOrElseZIO(self.create(voyageBare, vesselId))
-
-  /*
-  for {
-    recordOpt <- run(query[Voyage].filter(s => s.outVoy == lift(voyageBare.outVoy) && s.vesselId == lift(vesselId))).map(_.headOption).implicitly
-    now       <- Clock.currentTime(TimeUnit.MILLISECONDS)
-    voyage    <- ZIO.fromOption(recordOpt).foldZIO(
-      notFound => self.create(voyageBare, vesselId),
-      valFound => self.update(voyageBare.copy(id = valFound.id, vesselId = vesselId, createAt = valFound.createAt, updateAt = now))
-    )
-  } yield voyage
-  */
 
   def get(id: UUID): Task[Voyage] =
     run(
@@ -102,7 +100,7 @@ final case class VoyageTbLive(
   def hasNotifyAfterUpdate(voyageOld: Voyage, voyageBare: Voyage): Task[Boolean] = for {
     now     <- Clock.currentTime(TimeUnit.MILLISECONDS)
     vNew    <- self.update(voyageBare.copy(id = voyageOld.id, vesselId = voyageOld.vesselId, createAt = voyageOld.createAt, updateAt = now))
-    changed <- ZIO.succeed(VoyageTbLive.isChanged(voyageOld, vNew))
+    changed <- ZIO.succeed(VoyageTb.isChanged(voyageOld, vNew))
   } yield changed
 
   def findByShipNameAndOutVoy(shipName: String, outVoy: String): Task[Option[(Vessel, Voyage)]] = {
@@ -124,11 +122,4 @@ final case class VoyageTbLive(
 object VoyageTbLive {
 
   val layer = ZLayer.fromFunction(VoyageTbLive.apply _)
-
-  def isChanged(vAged: Voyage, vNew: Voyage): Boolean = {
-    if (vNew.atd != vAged.atd || vNew.etd != vAged.etd || vNew.etb != vAged.etb) true else false
-  }
-
-  // TODO, 结束后删除
-  def isEnd(vNew: Voyage): Boolean = vNew.atd != Constants.DEFAULT_STRING_VALUE
 }

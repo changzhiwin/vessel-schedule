@@ -4,7 +4,7 @@ import java.util.UUID
 
 import zio._
 import zio.http._
-import zio.http.model.{Method}
+import zio.http.model.{Method, Headers}
 import zio.json._
 
 import cc.knowship.subscribe.service.{SubscriberServ, SubscribeServ}
@@ -24,15 +24,22 @@ case class SubscribePartialLive(subscriberServ: SubscriberServ, subscribeServ: S
 
     case req @ Method.POST -> !! / "subscribe"  =>
       for {
-        body         <- req.body.asString
-        form         <- ZIO.fromEither(body.fromJson[SubscribeForm]).mapError(e => new Throwable(e))
-        subscriber   <- subscriberServ.findOrCreate(form.openId, form.source, form.receiver, form.nicknameValue)
-        subscription <- subscribeServ.registe(subscriber.id, form.wharfCode, form.vessel, form.voyageValue, form.infosValue)
-        content      <- subscribeServ.registeViewHtml(subscription)
-      } yield Response.html(content).updateHeaders(h => h ) // TODO ++ headers
+        body       <- req.body.asString
+        form       <- ZIO.fromEither(body.fromJson[SubscribeForm]).mapError(e => new Throwable(e))
+        subscriber <- subscriberServ.findOrCreate(form.openId, form.source, form.receiver, form.nicknameValue)
+        content    <- subscribeServ.registe(subscriber.id, form.wharfCode, form.vessel, form.voyageValue, form.infosValue)
+      } yield Response.html(content).updateHeaders(h => {
+        h ++
+        Headers("X-Email-To", form.openId) ++ 
+        Headers("X-Email-From", form.receiver) ++ 
+        Headers("X-Email-Subject", "Subscribe success")
+      })
 
-    case Method.DELETE -> !! / "subscribe" / id  =>
+    case Method.GET -> !! / "unsubscribe" / id  =>
       subscribeServ.cancel(UUID.fromString(id)).map(content => Response.html(content))
+
+    case req @ Method.POST -> !! / "mock-push-notify" =>
+      ZIO.succeed(Response.text(req.headers.toList.mkString("[", ",", "]")))
   }
 }
 

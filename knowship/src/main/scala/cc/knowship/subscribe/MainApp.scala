@@ -19,7 +19,7 @@ object MainApp extends ZIOAppDefault {
     _          <- FixScheduleStream.start(30.seconds)
 
     http = Http.collectZIO[Request] { subscribe.orElse(wharf).orElse(subscriber) }
-    _ <- Server.serve(http @@ Middleware.beautifyErrors)
+    _ <- Server.serve(http @@ Middleware.debug)
   } yield ()
 
   override def run = httpApp.provide(

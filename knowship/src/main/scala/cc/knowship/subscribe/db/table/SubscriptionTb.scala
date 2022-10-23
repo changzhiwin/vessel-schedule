@@ -15,6 +15,8 @@ trait SubscriptionTb {
 
   def create(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription]
 
+  def update(id: UUID, infos: Option[String] = None): Task[Long]
+
   def updateOrCreate(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription]
 
   def get(id: UUID): Task[Subscription]
@@ -43,18 +45,16 @@ final case class SubscriptionTbLive(
     _   <- run(query[Subscription].insertValue(lift(subscription))).implicitly
   } yield subscription
 
+  def update(id: UUID, infos: Option[String] = None): Task[Long] = for {
+    now <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    _   <- run(dynamicQuery[Subscription].filter(_.id == lift(id)).update(setValue(_.notifyAt, now), setOpt(_.infos, infos))).implicitly
+  } yield now
+
   def updateOrCreate(subscriberId: UUID, voyageId: UUID, infos: String): Task[Subscription] = for {
     recordOpt    <- run(query[Subscription].filter(s => s.subscriberId == lift(subscriberId) && s.voyageId == lift(voyageId))).map(_.headOption).implicitly
-    now       <- Clock.currentTime(TimeUnit.MILLISECONDS)
     subscription <- ZIO.fromOption(recordOpt).foldZIO(
       notFound => self.create(subscriberId, voyageId, infos),
-      valFound => {
-        run(
-          query[Subscription]
-            .filter(_.id == lift(valFound.id))
-            .update(_.infos -> lift(infos))
-        ).implicitly *> ZIO.succeed(valFound.copy(infos = infos))
-      }
+      valFound => self.update(valFound.id, Some(infos)).map(ts => valFound.copy(infos = infos, notifyAt = ts))
     )
   } yield subscription
 
@@ -81,13 +81,6 @@ final case class SubscriptionTbLive(
     run(
       query[Subscription].filter(s => s.voyageId == lift(voyageId)) 
     ).implicitly 
-
-  /*
-  def findByExpiredNotify(timestamp: Long): Task[List[Subscription]]
-    run(
-      query[Subscription].filter(s => s.notifyAt < lift(timestamp))
-    ).implicitly 
-  */
 }
 
 object SubscriptionTbLive {
