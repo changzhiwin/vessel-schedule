@@ -2,11 +2,12 @@ package cc.knowship.subscribe
 
 import zio._
 import zio.http._
-import zio.http.middleware._
+import zio.http.model._
 
+import cc.knowship.subscribe.util.DebugUtils
 import cc.knowship.subscribe.db.QuillContext
 import cc.knowship.subscribe.db.table.{SubscriberTbLive, SubscriptionTbLive, VesselTbLive, VoyageTbLive, WharfTbLive}
-import cc.knowship.subscribe.http._ //{SubscriberPartial, SubscriberPartialLive}
+import cc.knowship.subscribe.http._
 import cc.knowship.subscribe.service._
 import cc.knowship.subscribe.scheduler._
 
@@ -18,10 +19,11 @@ object MainApp extends ZIOAppDefault {
     wharf      <- WharfPartial.routes
     _          <- FixScheduleStream.start(30.seconds)
 
-    http = Http.collectZIO[Request] { subscribe.orElse(wharf).orElse(subscriber) }
-    _ <- Server.serve(http.middleware(Middleware.patchZIO { response =>
-           Console.printLine(s"status is error = ${response.status.isError}, headers = ${response.headers.toList.mkString("[", ",", "]")}").map(_ => Patch.empty).asSomeError
-         }))
+    http = (Http.collectZIO[Request] { subscribe.orElse(wharf).orElse(subscriber) }).catchAll { error =>
+      scala.Console.err.println(DebugUtils.prettify(error))
+      Http.response( HttpError.InternalServerError(cause = Some(error)).toResponse ) @@ Middleware.beautifyErrors
+    }
+    _ <- Server.serve(http)
   } yield ()
 
   override def run = httpApp.provide(
