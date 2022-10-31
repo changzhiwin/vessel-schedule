@@ -1,0 +1,124 @@
+package cc.knowship.subscribe.wharf
+
+import zio._
+import zio.json._
+import zio.http.{Client, Request, URL}
+
+import cc.knowship.subscribe.SubscribeException
+import cc.knowship.subscribe.util.Constants
+import cc.knowship.subscribe.service.WharfInformationServ
+import cc.knowship.subscribe.db.model.{Vessel, Voyage}
+
+case class NpediWharfInformation(client: Client) extends WharfInformationServ {
+
+  // ?vessel=MSC TOPAZ&voyage=FK244A
+  lazy val VoyageAPI = URL.fromString("http://47.115.165.44:4427/retrieve/npedi")
+
+  // 不需要做处理，假定传过来的都是真实的
+  override def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = {
+    ZIO.succeed(voyageName)
+  }
+  
+  override def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)] = for {
+    url      <- ZIO.fromEither(VoyageAPI)
+                   .mapError(m => new URLParseFailed(s"$m"))
+    
+    response <- client.request(Request.get(url.setQueryParams(s"vessel=${vesselName}&voyage=${voyageCode}")))
+    body     <- response.body.asString
+    schReply <- ZIO.fromEither(body.fromJson[NpediScheduleInfoReply])
+                   .mapError(_ => JsonDecodeFailed("NpediScheduleInfoReply"))
+    result   <- ZIO.fromEither(buildModels(schReply.data))
+  } yield result
+
+  private def buildModels(scheduleData: NpediScheduleData): Either[SubscribeException, (Vessel, Voyage)] = {
+    scheduleData.total match {
+      case 1 => Right( formatingModels(scheduleData.list.head) )
+      // size = 0 或者 size >= 2 都是异常
+      // case 0 => ??? // 没有查找到，怎么处理？ 创建空记录？
+      case _           => Left( VoyageMustOnlyOne(s"scheduleData.list = ${scheduleData.list.map(s"${_.vesselename} / ${_.voyage}").mkString("[", ",", "]")}") )
+    }
+  }
+
+  // private def formatingEmptyModels(): (Vessel, Voyage) = {}
+
+  private def formatingModels(scheduleBody: NpediScheduleBody): (Vessel, Voyage) = {
+    val s = scheduleBody
+
+    val vessel = Vessel(
+      imo = s.vesselcode,                                         // UN代码，应该是CMG中的IMO
+      shipName = s.vesselename,
+      company = s.vesselowner.getOrElse( s.vesselowner2.getOrElse(Constants.DEFAULT_STRING_VALUE) ),
+      shipCode = s.cnvesselname,                                  // 特殊：没有这个字段的映射，填充船的中文名
+
+      id = Constants.DEFAULT_UUID,
+      wharfId = Constants.DEFAULT_UUID,
+      createAt = Constants.DEFAULT_EPOCH_MILLI,
+    )
+    val voyage = Voyage(
+      terminalCode = s.matou,
+      inVoy = s"${s.voyage}-I",
+      outVoy = s.voyage,                                           // 以这个字段对齐其他码头
+
+      serviceId = Constants.DEFAULT_STRING_VALUE,                  // ++
+      inAgent = Constants.DEFAULT_STRING_VALUE,
+      outAgent = Constants.DEFAULT_STRING_VALUE,
+
+      rcvStart = s.ctnstart.getOrElse(Constants.DEFAULT_STRING_VALUE), // 进箱开始时间 Npedi 
+      rcvEnd = s.ctnend.getOrElse(Constants.DEFAULT_STRING_VALUE),     // 进箱结束时间 Npedi 
+
+      eta = Constants.DEFAULT_STRING_VALUE,
+      pob = Constants.DEFAULT_STRING_VALUE,
+      ata = Constants.DEFAULT_STRING_VALUE,                        // 实际靠泊时间
+      etb = Constants.DEFAULT_STRING_VALUE,                        // 计划靠泊时间 CMG关注
+      etd = Constants.DEFAULT_STRING_VALUE,                        // 计划离泊时间 CMG关注
+      atd = Constants.DEFAULT_STRING_VALUE,                        // 实际离泊时间 CMG关注
+      notes = s.revtime.getOrElse(Constants.DEFAULT_STRING_VALUE), // 看着有值，先填充着，暂时无用
+
+      id = Constants.DEFAULT_UUID,
+      vesselId = Constants.DEFAULT_UUID,
+      createAt = Constants.DEFAULT_EPOCH_MILLI,
+      updateAt = Constants.DEFAULT_EPOCH_MILLI,
+    )
+
+    (vessel, voyage)
+  }
+}
+
+case class NpediScheduleBody(
+  matou: String,
+  vesselcode: String,
+  voyage: String,
+  vesselename: String,
+  ctnstart: Option[String],
+  ctnend: Option[String],
+  etaarriveddate: Option[String],
+  etasailingdate: Option[String],
+  ediports: Option[String],
+  revtime: Option[String],
+  isenabled: Option[AnyVal],
+  ioflag: Option[String],
+  clpRevtime: Option[String],
+  showcolor: Option[String],
+  portclosedate: Option[String],
+  cnvesselname: String,
+  modifycode: Option[String],
+  modifyremark: Option[String],
+  vesselowner: Option[String],
+  vesselowner2: Option[String]
+)
+
+object NpediScheduleBody {
+  implicit val codec: JsonCodec[NpediScheduleBody] = DeriveJsonCodec.gen
+}
+
+case class NpediScheduleData(pageNum: Int, pageSize: Int, total: Int, totalPages: Int, list: List[NpediScheduleBody])
+
+object NpediScheduleData {
+  implicit val codec: JsonCodec[NpediScheduleData] = DeriveJsonCodec.gen
+}
+
+case class NpediScheduleInfoReply(data: NpediScheduleData, code: Int, msg: String)
+
+object NpediScheduleInfoReply {
+  implicit val codec: JsonCodec[NpediScheduleInfoReply] = DeriveJsonCodec.gen
+}

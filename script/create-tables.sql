@@ -23,8 +23,11 @@ CREATE TABLE IF NOT EXISTS Vessel (
   id CHAR(64) primary key NOT NULL,
   ship_code CHAR(64),
   ship_name CHAR(128),
+  ship_cn_name CHAR(128),
   company CHAR(64),
-  imo CHAR(64),
+  un_code CHAR(64),
+  in_agent CHAR(64),
+  out_agent CHAR(64),
   wharf_id CHAR(64),
   create_at INTEGER
 );
@@ -34,12 +37,10 @@ CREATE TABLE IF NOT EXISTS Voyage (
   terminal_code CHAR(32),
   in_voy CHAR(64),
   out_voy CHAR(64),
-  in_service CHAR(64),
-  out_service CHAR(64),
-  in_busi_voy CHAR(64),
-  out_busi_voy CHAR(64),
-  in_agent CHAR(64),
-  out_agent CHAR(64),
+  service_id CHAR(64),
+
+  rcv_start CHAR(64),
+  rcv_end CHAR(64),
 
   eta CHAR(64),
   pob CHAR(64),

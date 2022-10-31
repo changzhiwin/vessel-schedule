@@ -10,12 +10,10 @@ final case class Voyage(
   terminalCode: String,  // TerminalCode 港区
   inVoy: String,         // invoynbr
   outVoy: String,        // outvoynbr
-  inService: String,     // InServiceId
-  outService: String,    // OutServiceId
-  inBusiVoy: String,     // INBUSINESSVOY
-  outBusiVoy: String,    // OUTBUSINESSVOY
-  inAgent: String,       // Inagent
-  outAgent: String,      // Outagent
+  serviceId: String,     // ServiceId
+
+  rcvStart: String,      // Npedi#ctnstart
+  rcvEnd: String,        // Npedi#ctnend
 
   eta: String,           // ETADate
   pob: String,           // POB

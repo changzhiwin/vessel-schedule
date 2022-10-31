@@ -20,7 +20,6 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
   override def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = for {
     url      <- ZIO.fromEither(VesselAPI)
                    .mapError(m => new URLParseFailed(s"$m"))
-    // client.0request(Request(url = url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
 
     response <- client.request(Request.get(url.setQueryParams(s"VesselName=${vesselName}&PageIndex=1&PageSize=999")))
     body     <- response.body.asString
@@ -32,7 +31,6 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
   override def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)] = for {
     url      <- ZIO.fromEither(VoyageAPI)
                    .mapError(m => new URLParseFailed(s"$m"))
-    // client.0request(Request(url = url.setQueryParams(s"FullName=${vesselName}&vesselName=${vesselName}&OutboundVoy=${voyageCode}&PageIndex=1&PageSize=30")))
     
     response <- client.request(Request.get(url.setQueryParams(s"FullName=${vesselName}&vesselName=${vesselName}&OutboundVoy=${voyageCode}&PageIndex=1&PageSize=30")))
     body     <- response.body.asString
@@ -45,7 +43,7 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
     scheduleList match {
       case head :: Nil => Right( formatingModels(head) )
       // size = 0 或者 size >= 2 都是错误的
-      case _           => Left( VoyageMustOnlyOne(s"ScheduleInfoList = ${scheduleList.map(_.outvoynbr).mkString("[", ",", "]")}") )
+      case _           => Left( VoyageMustOnlyOne(s"ScheduleInfoList = ${scheduleList.map(info => info.TheFullName + "/" + info.outvoynbr).mkString("[", ",", "]")}") )
     }
   }
 
@@ -55,8 +53,11 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
     val vessel = Vessel(
       shipCode = s.ShipId,
       shipName = s.TheFullName,
+      shipCnName = Constants.DEFAULT_STRING_VALUE,
       company = s.LINEID,
-      imo = s.IMO.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      unCode = s.IMO.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      inAgent = s.Inagent.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      outAgent = s.Outagent.getOrElse(Constants.DEFAULT_STRING_VALUE),
 
       id = Constants.DEFAULT_UUID,
       wharfId = Constants.DEFAULT_UUID,
@@ -66,12 +67,10 @@ case class CmgWharfInformation(client: Client) extends WharfInformationServ {
       terminalCode = s.TerminalCode,
       inVoy = s.invoynbr,
       outVoy = s.outvoynbr,
-      inService = s.InServiceId.getOrElse(Constants.DEFAULT_STRING_VALUE),
-      outService = s.OutServiceId.getOrElse(Constants.DEFAULT_STRING_VALUE),
-      inBusiVoy = s.INBUSINESSVOY.getOrElse(Constants.DEFAULT_STRING_VALUE),
-      outBusiVoy = s.OUTBUSINESSVOY.getOrElse(Constants.DEFAULT_STRING_VALUE),
-      inAgent = s.Inagent.getOrElse(Constants.DEFAULT_STRING_VALUE),
-      outAgent = s.Outagent.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      serviceId = s.ServiceId.getOrElse(Constants.DEFAULT_STRING_VALUE), // ++
+
+      rcvStart = Constants.DEFAULT_STRING_VALUE, // 进箱开始时间 Npedi ++
+      rcvEnd = Constants.DEFAULT_STRING_VALUE,   // 进箱结束时间 Npedi ++
 
       eta = s.ETADate.getOrElse(Constants.DEFAULT_STRING_VALUE),
       pob = s.POB.getOrElse(Constants.DEFAULT_STRING_VALUE),

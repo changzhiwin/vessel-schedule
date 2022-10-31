@@ -39,8 +39,8 @@ case class SubscribeServLive(
     selectedVoy  <- wharfInfServ.voyageOfVessel(vessel, voyage)
     twoRecord    <- voyageTb.findByShipNameAndOutVoy(vessel, selectedVoy).someOrElseZIO {
                       for {
-                        twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy)
-                        vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id)
+                        twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).debug("Fetched")
+                        vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id).debug("vesselObj")
                         voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id).debug("voyageObj")
                       } yield (vesselObj, voyageObj)
                     }
@@ -54,13 +54,12 @@ case class SubscribeServLive(
 
     pushAPI  = URL.fromString("http://127.0.0.1:8080/mock-push-notify")
     url      <- ZIO.fromEither(pushAPI).mapError(m => new URLParseFailed(s"$m"))
-    // client.0request(Request(method = Method.POST, url = url, headers = headers, body = body))
 
     isFinish = VoyageTb.isFinished(voyage)
     state    = if (isFinish) SubscribeState.Finished("Finish") else SubscribeState.Updating("Update")
     headers  = Headers("X-Email-To", suber.openId) ++ Headers("X-Email-From", suber.receiver) ++ Headers("X-Email-Subject", state.detail)
     body     = Body.fromString(viewOfHtml(state, subscription, voyage, vessel).encode.toString)
-    response <- client.request(Request.post(body, url).updateHeaders(h => h ++ headers)) // client.request("http://127.0.0.1:8080/mock-push-notify", Method.POST, headers, body)
+    response <- client.request(Request.post(body, url).updateHeaders(h => h ++ headers))
     _        <- response.body.asString.debug("Push response body")
 
     _        <- ZIO.ifZIO(ZIO.succeed(isFinish))(

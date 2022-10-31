@@ -22,8 +22,11 @@ case class FakeWharfInformation() extends WharfInformationServ {
     val vessel = Vessel(
       shipCode = "shipCode",
       shipName = vesselName,
+      shipCnName = "中文名",
       company = "Fake Company",
-      imo = "imo",
+      unCode = "UN9999888",
+      inAgent = "inAgent",
+      outAgent = "outAgent",
 
       id = Constants.DEFAULT_UUID,
       wharfId = Constants.DEFAULT_UUID,
@@ -36,12 +39,10 @@ case class FakeWharfInformation() extends WharfInformationServ {
       terminalCode = "terminalCode",
       inVoy = s"${voyageCode}I",
       outVoy = voyageCode,
-      inService = "inService",
-      outService = "outService",
-      inBusiVoy = s"${voyageCode}I",
-      outBusiVoy = voyageCode,
-      inAgent = "inAgent",
-      outAgent = "outAgent",
+      serviceId = "serviceId",
+
+      rcvStart = Constants.DEFAULT_STRING_VALUE, // 进箱开始时间 Npedi ++
+      rcvEnd = Constants.DEFAULT_STRING_VALUE,   // 进箱结束时间 Npedi ++
 
       eta = dateTimeStr,
       pob = dateTimeStr,
