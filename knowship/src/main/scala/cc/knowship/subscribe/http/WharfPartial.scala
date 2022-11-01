@@ -7,6 +7,8 @@ import zio.http._
 import zio.http.model.{Method}
 import zio.json._
 
+import cc.knowship.subscribe.util.Constants
+import cc.knowship.subscribe.db.model.Wharf
 import cc.knowship.subscribe.db.table.WharfTb
 
 trait WharfPartial {
@@ -36,12 +38,23 @@ case class WharfPartialLive(wharfTb: WharfTb) extends WharfPartial {
       for {
         body  <- req.body.asString
         form  <- ZIO.fromEither(body.fromJson[WharfForm].left.map(new Error(_)))
-        wharf <- wharfTb.create(form.name, form.code, form.website.getOrElse("-"))
+        wharf <- wharfTb.create(buildModel(form))
       } yield Response.json(wharf.toJson)
 
     case Method.DELETE -> !! / "wharf" / id   =>
       wharfTb.delete(UUID.fromString(id)).map(_ => Response.ok)
   }
+
+  private def buildModel(form: WharfForm): Wharf = Wharf(
+    id = Constants.DEFAULT_UUID,
+    name = form.name,
+    code = form.code,
+    website = form.website.getOrElse("-"),
+    period = form.period.getOrElse(900000),         // 默认15分钟 = 15 * 60 * 1000
+    workStart = form.workStart.getOrElse(21600000), // 默认，早晨6点 = 6 * 60 * 60 * 1000
+    workEnd = form.workEnd.getOrElse(84600000),      // 默认，晚上23:30 = (23 * 60 + 30) * 60 * 1000
+    createAt = Constants.DEFAULT_EPOCH_MILLI
+  )
 }
 
 object WharfPartialLive {
@@ -51,7 +64,10 @@ object WharfPartialLive {
 final case class WharfForm(
   name: String, 
   code: String, 
-  website: Option[String]
+  website: Option[String],
+  period: Option[Long],
+  workStart: Option[Long],
+  workEnd: Option[Long]
 )
 
 object WharfForm {

@@ -5,13 +5,30 @@ import zio.json._
 import zio.http.{Client, Request, URL}
 
 import cc.knowship.subscribe.SubscribeException
-import cc.knowship.subscribe.util.Constants
+import cc.knowship.subscribe.util.{Constants, TimeDateUtils}
 import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
 case class NpediWharfInformation(client: Client) extends WharfInformationServ {
 
   import SubscribeException._
+
+  /**
+    * 对比计划靠泊、计划离泊、开始进箱、结束进箱时间
+    */
+  override def isChanged(vAged: Voyage, vNew: Voyage): Boolean = {
+    (vNew.eta != vAged.eta || vNew.etd != vAged.etd || vNew.rcvEnd != vAged.rcvEnd || vNew.rcvStart != vAged.rcvStart)
+  }
+
+  /**
+    * 当前时间大于ctnEndTime，则判断这水船信息不在变更了
+    * 假设都是基于东八区的时间
+    * eg. 2022-10-31 00:00:01 < 2022-11-01 09:57:19
+    */
+  override def isFinished(vNew: Voyage): Boolean = {
+    val currTimeStr = TimeDateUtils.currentLocalDateTimeStr
+    vNew.rcvEnd < currTimeStr
+  }
 
   lazy val VoyageAPI = URL.fromString("http://127.0.0.1:4427/retrieve/npedi")
 
@@ -64,21 +81,21 @@ case class NpediWharfInformation(client: Client) extends WharfInformationServ {
     val voyage = Voyage(
       terminalCode = s.terminal,
       inVoy = s"${s.voyage}-I",
-      outVoy = s.voyage,                                           // 以这个字段对齐其他码头
+      outVoy = s.voyage,                                             // 以这个字段对齐其他码头
       serviceId = s.serviceCode.getOrElse(Constants.DEFAULT_STRING_VALUE),
 
-      rcvStart = rcv._1,   // 进箱开始时间 Npedi 
-      rcvEnd = rcv._2,     // 进箱结束时间 Npedi 
+      rcvStart = rcv._1,                                             // 进箱开始时间
+      rcvEnd = rcv._2,                                               // 进箱结束时间 
 
-      pob = s.publishTime.getOrElse(Constants.DEFAULT_STRING_VALUE),   // 保存一下这个时间，因为判断和这个相关
+      pob = s.publishTime.getOrElse(Constants.DEFAULT_STRING_VALUE), // 保存一下这个时间，因为判断和这个相关
       etb = Constants.DEFAULT_STRING_VALUE,
       
-      eta = s.eta.getOrElse(Constants.DEFAULT_STRING_VALUE),                        // 计划靠泊时间
-      ata = s.ata.getOrElse(Constants.DEFAULT_STRING_VALUE),                        // 实际靠泊时间
-      etd = s.etd.getOrElse(Constants.DEFAULT_STRING_VALUE),                        // 计划离泊时间
-      atd = s.atd.getOrElse(Constants.DEFAULT_STRING_VALUE),                        // 实际离泊时间
+      eta = s.eta.getOrElse(Constants.DEFAULT_STRING_VALUE),         // 计划靠泊时间
+      ata = s.ata.getOrElse(Constants.DEFAULT_STRING_VALUE),         // 实际靠泊时间
+      etd = s.etd.getOrElse(Constants.DEFAULT_STRING_VALUE),         // 计划离泊时间
+      atd = s.atd.getOrElse(Constants.DEFAULT_STRING_VALUE),         // 实际离泊时间
 
-      notes = s.published, // 用于判断是否有进箱信息了
+      notes = s.published,                                           // 用于判断是否有进箱信息了
 
       id = Constants.DEFAULT_UUID,
       vesselId = Constants.DEFAULT_UUID,
@@ -91,66 +108,66 @@ case class NpediWharfInformation(client: Client) extends WharfInformationServ {
 }
 
 case class NpediScheduleBody(
-  mmsi: Option[String], // "352361000",
-  vesselEnName: String, // "MSC BETTINA",
-  vesselCnName: Option[String], // "地中海贝蒂娜",
-  vesselCode: String, // "MSCET",
-  vesselUnCode: String, // "UN9399038",
-  terminal: String, // "BLCT3",
-  voyage: String, // "FK243A",
-  vesselDirect: Option[String],  // "E",
-  tradeFlag: Option[String],  // "W",
-  vesselReference: Option[String],  // "MSCET1030",
-  imo: Option[String],  // "1",
-  vesselSysid: Option[String],  // "0",
-  vesselOwner: String, //"MSC",
-  vesselAgent: Option[String],  // "PEN",
-  serviceCode: Option[String],  // null, "serviceCode": "MSCMID",
-  lineOperatorCode: String, //"MSC",
-  ctnStartTime: String, //"2022-10-26 00:00:01", "9998-01-01 00:00:01"
-  ctnEndTime: String, //"2022-10-31 00:00:01",  "9999-01-01 00:00:01"
-  hazardStartTime: Option[String],  // null,
-  hazardEndTime: Option[String],  // null,
-  spHazardStartTime: Option[String],  // null,
-  spHazardEndTime: Option[String],  // null,
-  etaMonthly: Option[String],  // "2022-10-30 14:00:00",
-  etdMonthly: Option[String],  // "2022-10-31 00:00:01",
-  etaRecently: Option[String],  // null,
-  etdRecently: Option[String],  // null,
-  etaDaily: Option[String],  // "2022-10-31 16:30:00",
-  etdDaily: Option[String],  // "2022-11-01 14:00:00",
-  eta: Option[String],  // "2022-10-31 16:30:00",
-  etd: Option[String],  // "2022-11-01 14:00:00",
-  etanchor: Option[String],  // "2022-10-31 00:00:01",
-  atanchor: Option[String],  // "2022-10-31 00:00:01",
-  ata: Option[String],  // null,
-  atd: Option[String],  // null,
-  ats: Option[String],  // null,
-  ate: Option[String],  // null,
-  ets: Option[String],  // null,
-  ete: Option[String],  // null,
-  voycloseTime: Option[String],  // null,
-  customCloseTime: Option[String],  // "2022-10-31 04:30:00",
-  portCloseTime: Option[String],  // "2022-10-31 04:30:00",
-  berthReference: Option[String],  // "10",
-  ports: Option[String],  // "AEJEA:HKHKG: OMSLL: ...",
-  lastPortCode: Option[String],  // "CNSHA",
-  nextPortCode: Option[String],  // "CNSHK",
-  lastPortName: Option[String],  // "上海",
-  nextPortName: Option[String],  // "蛇口",
-  voyagePublishTime: Option[String],  // null,
-  voyagePublished: Option[String],  // "Y",
-  publishTime: Option[String],  // "2022-10-25 09:22:57",
-  published: String,  // "Y",
-  modifyCode: Option[String],  // null,
-  modifyRemark: Option[String],  // null,
-  vesselOwnerCtnTimes: Option[String],  // null,
-  status: Option[String],  // "Y",
-  vesselAgentName: Option[String],  // "外代",
-  etaBegin: Option[String],  // null
-  etaEnd: Option[String],  // null
-  ataBegin: Option[String],  // null
-  ataEnd: Option[String]  // null
+  mmsi: Option[String],                // "352361000",
+  vesselEnName: String,                // "MSC BETTINA",
+  vesselCnName: Option[String],        // "地中海贝蒂娜",
+  vesselCode: String,                  // "MSCET",
+  vesselUnCode: String,                // "UN9399038",
+  terminal: String,                    // "BLCT3",
+  voyage: String,                      // "FK243A",
+  vesselDirect: Option[String],        // "E",
+  tradeFlag: Option[String],           // "W",
+  vesselReference: Option[String],     // "MSCET1030",
+  imo: Option[String],                 // "1",
+  vesselSysid: Option[String],         // "0",
+  vesselOwner: String,                 //"MSC",
+  vesselAgent: Option[String],         // "PEN",
+  serviceCode: Option[String],         // null, "serviceCode": "MSCMID",
+  lineOperatorCode: String,            //"MSC",
+  ctnStartTime: String,                //"2022-10-26 00:00:01", "9998-01-01 00:00:01"
+  ctnEndTime: String,                  //"2022-10-31 00:00:01",  "9999-01-01 00:00:01"
+  hazardStartTime: Option[String],     // null,
+  hazardEndTime: Option[String],       // null,
+  spHazardStartTime: Option[String],   // null,
+  spHazardEndTime: Option[String],     // null,
+  etaMonthly: Option[String],          // "2022-10-30 14:00:00",
+  etdMonthly: Option[String],          // "2022-10-31 00:00:01",
+  etaRecently: Option[String],         // null,
+  etdRecently: Option[String],         // null,
+  etaDaily: Option[String],            // "2022-10-31 16:30:00",
+  etdDaily: Option[String],            // "2022-11-01 14:00:00",
+  eta: Option[String],                 // "2022-10-31 16:30:00",
+  etd: Option[String],                 // "2022-11-01 14:00:00",
+  etanchor: Option[String],            // "2022-10-31 00:00:01",
+  atanchor: Option[String],            // "2022-10-31 00:00:01",
+  ata: Option[String],                 // null,
+  atd: Option[String],                 // null,
+  ats: Option[String],                 // null,
+  ate: Option[String],                 // null,
+  ets: Option[String],                 // null,
+  ete: Option[String],                 // null,
+  voycloseTime: Option[String],        // null,
+  customCloseTime: Option[String],     // "2022-10-31 04:30:00",
+  portCloseTime: Option[String],       // "2022-10-31 04:30:00",
+  berthReference: Option[String],      // "10",
+  ports: Option[String],               // "AEJEA:HKHKG: OMSLL: ...",
+  lastPortCode: Option[String],        // "CNSHA",
+  nextPortCode: Option[String],        // "CNSHK",
+  lastPortName: Option[String],        // "上海",
+  nextPortName: Option[String],        // "蛇口",
+  voyagePublishTime: Option[String],   // null,
+  voyagePublished: Option[String],     // "Y",
+  publishTime: Option[String],         // "2022-10-25 09:22:57",
+  published: String,                   // "Y",
+  modifyCode: Option[String],          // null,
+  modifyRemark: Option[String],        // null,
+  vesselOwnerCtnTimes: Option[String], // null,
+  status: Option[String],              // "Y",
+  vesselAgentName: Option[String],     // "外代",
+  etaBegin: Option[String],            // null
+  etaEnd: Option[String],              // null
+  ataBegin: Option[String],            // null
+  ataEnd: Option[String]               // null
 )
 
 object NpediScheduleBody {

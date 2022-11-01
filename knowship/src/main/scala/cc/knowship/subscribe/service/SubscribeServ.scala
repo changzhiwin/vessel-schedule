@@ -4,7 +4,7 @@ import java.util.UUID
 
 import zio._
 import zio.http.html._
-import zio.http.model.{Method, Headers}
+import zio.http.model.{Headers}
 import zio.http.{Client, Request, Body, URL}
 
 import cc.knowship.subscribe.SubscribeException._
@@ -34,8 +34,7 @@ case class SubscribeServLive(
 
   def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[Html] = for {
     wharf        <- wharfTb.findByCode(wharfCode)
-    wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code))
-                       .mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
+    wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code)).mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
     selectedVoy  <- wharfInfServ.voyageOfVessel(vessel, voyage)
     twoRecord    <- voyageTb.findByShipNameAndOutVoy(vessel, selectedVoy).someOrElseZIO {
                       for {
@@ -47,25 +46,27 @@ case class SubscribeServLive(
     subscription <- subscriptionTb.updateOrCreate(subscriberId, twoRecord._2.id, infos)
   } yield viewOfHtml(SubscribeState.Updating("Registe"), subscription, twoRecord._2, twoRecord._1)
 
+  // 优化TODO: 可以按照voyage聚合之后，发通知；这样可以减少对vessel、voyage、wharf的查询
   def pushUpdate(subscription: Subscription): Task[Unit]= for {
-    suber    <- subscriberTb.get(subscription.subscriberId)
-    voyage   <- voyageTb.get(subscription.voyageId)
-    vessel   <- vesselTb.get(voyage.vesselId)
+    subscriber   <- subscriberTb.get(subscription.subscriberId)
+    voyage       <- voyageTb.get(subscription.voyageId)
+    vessel       <- vesselTb.get(voyage.vesselId)
+    wharf        <- wharfTb.get(vessel.wharfId)
+    wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code)).mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
 
-    pushAPI  = URL.fromString("http://127.0.0.1:8080/mock-push-notify")
-    url      <- ZIO.fromEither(pushAPI).mapError(m => new URLParseFailed(s"$m"))
+    pushAPI      = URL.fromString("http://127.0.0.1:8080/mock-push-notify")
+    url          <- ZIO.fromEither(pushAPI).mapError(m => new URLParseFailed(s"$m"))
 
-    isFinish = VoyageTb.isFinished(voyage)
-    state    = if (isFinish) SubscribeState.Finished("Finish") else SubscribeState.Updating("Update")
-    headers  = Headers("X-Email-To", suber.openId) ++ Headers("X-Email-From", suber.receiver) ++ Headers("X-Email-Subject", state.detail)
-    body     = Body.fromString(viewOfHtml(state, subscription, voyage, vessel).encode.toString)
-    response <- client.request(Request.post(body, url).updateHeaders(h => h ++ headers))
-    _        <- response.body.asString.debug("Push response body")
-
-    _        <- ZIO.ifZIO(ZIO.succeed(isFinish))(
-                  onTrue  = mayDeleteLastSubscribeOnVoyage(subscription.id, voyage.id, vessel.id),
-                  onFalse = subscriptionTb.update(subscription.id)
-                ).debug("After push")
+    isFinish     = wharfInfServ.isFinished(voyage)
+    state        = if (isFinish) SubscribeState.Finished("Finish") else SubscribeState.Updating("Update")
+    headers      = Headers("X-Email-To", subscriber.openId) ++ Headers("X-Email-From", subscriber.receiver) ++ Headers("X-Email-Subject", state.detail)
+    body         = Body.fromString(viewOfHtml(state, subscription, voyage, vessel).encode.toString)
+    response     <- client.request(Request.post(body, url).updateHeaders(h => h ++ headers))
+    _            <- response.body.asString.debug("Push response body")
+    _            <- ZIO.ifZIO(ZIO.succeed(isFinish))(
+                      onTrue  = mayDeleteLastSubscribeOnVoyage(subscription.id, voyage.id, vessel.id),
+                      onFalse = subscriptionTb.update(subscription.id)
+                    ).debug("After push")
   } yield ()
 
   def cancel(subscriptionId: UUID): Task[Html]= for {

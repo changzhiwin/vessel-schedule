@@ -16,22 +16,23 @@ case class FetchNewsPipeline(
   wharfInformationServ: Map[String, WharfInformationServ]
 ) {
 
-  def transform() = ZPipeline.mapZIO[Any, Throwable, Voyage, Chunk[Subscription]](
+  def transform() = 
+    ZPipeline.mapZIO[Any, Throwable, Voyage, Chunk[Subscription]](v => compareToRemoteInfo(v)) >>> 
+    ZPipeline.mapChunks[Chunk[Subscription], Subscription](_.flatten)
 
-    voyage => for {
-      vessel       <- vesselTb.get(voyage.vesselId)
-      wharf        <- wharfTb.get(vessel.wharfId)
-      wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code))
-                        .mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
-      voyaStatus   <- wharfInfServ.voyageStatus(vessel.shipName, voyage.outVoy)
-      notifySet    <- ZIO.ifZIO(voyageTb.hasNotifyAfterUpdate(voyage, voyaStatus._2))(
-                        onTrue  = subscriptionTb.findByVoyage(voyage.id).map(Chunk.from(_)),
-                        onFalse = ZIO.succeed(Chunk.empty[Subscription])
-                      )
-    } yield notifySet 
-    
-  ) >>> ZPipeline.mapChunks[Chunk[Subscription], Subscription](_.flatten)
+  private def compareToRemoteInfo(voyage: Voyage): Task[Chunk[Subscription]] = for {
+    vessel       <- vesselTb.get(voyage.vesselId)
+    wharf        <- wharfTb.get(vessel.wharfId)
+    wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code))
+                      .mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
+    voyaStatus   <- wharfInfServ.voyageStatus(vessel.shipName, voyage.outVoy)
 
+    voyaUpdate   = voyaStatus._2.copy(id = voyage.id, vesselId = voyage.vesselId, createAt = voyage.createAt)
+    notifySet    <- ZIO.ifZIO(voyageTb.update(voyaUpdate).map(wharfInfServ.isChanged(voyage, _)))(
+                      onTrue  = subscriptionTb.findByVoyage(voyaUpdate.id).map(Chunk.from(_)),
+                      onFalse = ZIO.succeed(Chunk.empty[Subscription])
+                    )
+  } yield notifySet 
 }
 
 object FetchNewsPipeline {

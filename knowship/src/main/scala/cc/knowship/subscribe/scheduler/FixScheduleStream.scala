@@ -9,11 +9,15 @@ case class FixScheduleStream(
   notifySink: NotifySink
 ) {
 
+  /**
+    * 这个参数只是，调度的最小颗粒度；具体过期逻辑每个码头可以定制
+    * @param period
+    */
   def start(period: Duration) = 
     ZStream
       .fromSchedule(Schedule.fixed(period))
       .tap(x => Console.printLine(s"Pipeline, before checkExpired: $x"))
-      .via(checkExpiredPipeline.transform(period))
+      .via(checkExpiredPipeline.transform())
       .via(fetchNewsPipeline.transform())
       .run(notifySink.consume)
       .fork

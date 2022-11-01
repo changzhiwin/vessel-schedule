@@ -38,7 +38,7 @@ final case class VesselTbLive(
   } yield vessel
 
   def findOrCreate(vesselBare: Vessel, wharfId: UUID): Task[Vessel] =
-    run(query[Vessel].filter(s => s.shipCode == lift(vesselBare.shipCode) && s.shipName == lift(vesselBare.shipName)))
+    run(query[Vessel].filter(s => s.unCode == lift(vesselBare.unCode) && s.shipName == lift(vesselBare.shipName)))
       .map(_.headOption)
       .implicitly
       .someOrElseZIO(self.create(vesselBare, wharfId))

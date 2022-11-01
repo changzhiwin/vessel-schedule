@@ -60,5 +60,8 @@ CREATE TABLE IF NOT EXISTS Wharf(
   name  CHAR(128),
   code  CHAR(64),
   website CHAR(64),
+  period INTEGER,
+  work_start INTEGER,
+  work_end INTEGER,
   create_at INTEGER
 );

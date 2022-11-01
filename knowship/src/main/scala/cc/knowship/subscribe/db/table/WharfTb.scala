@@ -13,7 +13,7 @@ import cc.knowship.subscribe.db.model.Wharf
 
 trait WharfTb {
 
-  def create(name: String, code: String, website: String): Task[Wharf]
+  def create(bareWharf: Wharf): Task[Wharf]
 
   def findByCode(code: String): Task[Wharf]
 
@@ -32,11 +32,12 @@ final case class WharfTbLive(
   import QuillContext._
   implicit val env = Implicit(dataSource)
 
-  def create(name: String, code: String, website: String): Task[Wharf] = for {
+  //def create(name: String, code: String, website: String): Task[Wharf] = for {
+  def create(bareWharf: Wharf): Task[Wharf] = for {
     id     <- Random.nextUUID
     now    <- Clock.currentTime(TimeUnit.MILLISECONDS)
 
-    wharf = Wharf(id, name, code, website, now)
+    wharf = bareWharf.copy(id = id, createAt = now)
     _ <- run(query[Wharf].insertValue(lift(wharf))).implicitly
   } yield wharf
 

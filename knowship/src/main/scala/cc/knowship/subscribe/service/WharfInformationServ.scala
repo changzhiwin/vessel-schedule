@@ -5,8 +5,22 @@ import zio.http.Client
 
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 import cc.knowship.subscribe.wharf._
+import cc.knowship.subscribe.util.Constants
 
 trait WharfInformationServ {
+
+  /**
+    * 不同码头的判断情况不一样，只提供默认实现
+    * @param vAged
+    * @param vNew
+    */
+  def isChanged(vAged: Voyage, vNew: Voyage): Boolean = (vNew.atd != vAged.atd || vNew.etd != vAged.etd || vNew.etb != vAged.etb)
+
+  /**
+    * 不同码头的判断情况不一样，只提供默认实现
+    * @param vNew
+    */
+  def isFinished(vNew: Voyage): Boolean = vNew.atd != Constants.DEFAULT_STRING_VALUE
 
   /**
     * 船名、航次不一定是正确的，用于匹配对应的航次
@@ -22,6 +36,7 @@ trait WharfInformationServ {
     * @param voyageCode
     */
   def voyageStatus(vesselName: String, voyageCode: String): Task[(Vessel, Voyage)]
+
 }
 
 // https://zio.dev/reference/contextual/zenvironment
@@ -43,4 +58,5 @@ object WharfInformationServ {
       }
     }
   }
+    
 }

@@ -10,7 +10,7 @@ import io.getquill.context.qzio.ImplicitSyntax._
 import cc.knowship.subscribe.util.Constants
 import cc.knowship.subscribe.SubscribeException._
 import cc.knowship.subscribe.db.QuillContext
-import cc.knowship.subscribe.db.model.{Voyage, Vessel}
+import cc.knowship.subscribe.db.model.{Voyage, Vessel} // Wharf
 
 trait VoyageTb {
 
@@ -26,9 +26,9 @@ trait VoyageTb {
 
   def nonVesselExist(vesselId: UUID): Task[Boolean]
 
-  def findByExpiredUpdate(timestamp: Long): Task[List[Voyage]]
+  def findUpdateAtExpiredByWharf(wharfId: UUID, timestamp: Long): Task[List[Voyage]]
 
-  def hasNotifyAfterUpdate(voyageOld: Voyage, voyageBare: Voyage): Task[Boolean]
+  //def hasNotifyAfterUpdate(voyageOld: Voyage, voyageBare: Voyage): Task[Boolean]
 
   def findByShipNameAndOutVoy(shipName: String, outVoy: String): Task[Option[(Vessel, Voyage)]]
 }
@@ -57,12 +57,12 @@ final case class VoyageTbLive(
     _ <- run(query[Voyage].insertValue(lift(voyage))).implicitly
   } yield voyage
 
-  def update(voyage: Voyage): Task[Voyage] =
-    run(
-      query[Voyage]
-      .filter(_.id == lift(voyage.id))
-      .updateValue(lift(voyage))
-    ).implicitly *> ZIO.succeed(voyage)
+  def update(voyage: Voyage): Task[Voyage] = for {
+    now       <- Clock.currentTime(TimeUnit.MILLISECONDS)
+
+    voyageNew = voyage.copy(updateAt = now)
+    _         <- run(query[Voyage].filter(_.id == lift(voyageNew.id)).updateValue(lift(voyageNew))).implicitly 
+  } yield voyageNew
 
   def findOrCreate(voyageBare: Voyage, vesselId: UUID): Task[Voyage] = 
     run(query[Voyage].filter(s => s.outVoy == lift(voyageBare.outVoy) && s.vesselId == lift(vesselId)))
@@ -92,23 +92,34 @@ final case class VoyageTbLive(
     )
     .map(_.isEmpty).implicitly
 
-  def findByExpiredUpdate(timestamp: Long): Task[List[Voyage]] =
-    run(
-      query[Voyage].filter(s => s.updateAt < lift(timestamp)) 
-    ).implicitly    
+  def findUpdateAtExpiredByWharf(wharfId: UUID, timestamp: Long): Task[List[Voyage]] = {
 
+    val q = quote {
+      for {
+        vessel <- query[Vessel] if (vessel.wharfId == lift(wharfId))
+        voyage <- query[Voyage] if (voyage.updateAt < lift(timestamp)) // voyage.vesselId == lift(vessel.id) && 
+      } yield voyage
+    }
+
+    run(q).implicitly
+  }
+
+  // Bad Case: 包含了对比的逻辑，这个逻辑完全可以给到上层
+  /*
   def hasNotifyAfterUpdate(voyageOld: Voyage, voyageBare: Voyage): Task[Boolean] = for {
     now     <- Clock.currentTime(TimeUnit.MILLISECONDS)
     vNew    <- self.update(voyageBare.copy(id = voyageOld.id, vesselId = voyageOld.vesselId, createAt = voyageOld.createAt, updateAt = now))
+    // TODO 判断需要修改
     changed <- ZIO.succeed(VoyageTb.isChanged(voyageOld, vNew))
   } yield changed
+  */
 
   def findByShipNameAndOutVoy(shipName: String, outVoy: String): Task[Option[(Vessel, Voyage)]] = {
     
     val q = quote {
       for {
         vessel <- query[Vessel] if (vessel.shipName == lift(shipName))
-        voyage <- query[Voyage] if (voyage.outVoy == lift(outVoy))
+        voyage <- query[Voyage] if (voyage.outVoy == lift(outVoy)) // voyage.vesselId == lift(vessel.id) && 
       } yield {
         (vessel, voyage)
       }
