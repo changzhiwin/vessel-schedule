@@ -39,8 +39,8 @@ case class SubscribeServLive(
     twoRecord    <- voyageTb.findByShipNameAndOutVoy(vessel, selectedVoy).someOrElseZIO {
                       for {
                         twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).debug("Fetched")
-                        vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id).debug("vesselObj")
-                        voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id).debug("voyageObj")
+                        vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id)
+                        voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id)
                       } yield (vesselObj, voyageObj)
                     }
     subscription <- subscriptionTb.updateOrCreate(subscriberId, twoRecord._2.id, infos)

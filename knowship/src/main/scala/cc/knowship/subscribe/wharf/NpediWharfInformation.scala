@@ -27,7 +27,7 @@ case class NpediWharfInformation(client: Client) extends WharfInformationServ {
     */
   override def isFinished(vNew: Voyage): Boolean = {
     val currTimeStr = TimeDateUtils.currentLocalDateTimeStr
-    vNew.rcvEnd < currTimeStr
+    (vNew.rcvEnd != Constants.DEFAULT_STRING_VALUE && vNew.rcvEnd < currTimeStr)
   }
 
   lazy val VoyageAPI = URL.fromString("http://127.0.0.1:4427/retrieve/npedi")

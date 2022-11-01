@@ -16,8 +16,9 @@ case class FixScheduleStream(
   def start(period: Duration) = 
     ZStream
       .fromSchedule(Schedule.fixed(period))
-      .tap(x => Console.printLine(s"Pipeline, before checkExpired: $x"))
+      .tap(x => Console.printLine(s"Pipeline, it's $x times"))
       .via(checkExpiredPipeline.transform())
+      .tap(x => ZIO.debug(x))
       .via(fetchNewsPipeline.transform())
       .run(notifySink.consume)
       .fork
