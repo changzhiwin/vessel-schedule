@@ -20,6 +20,8 @@ case class FixScheduleStream(
       .via(checkExpiredPipeline.transform())
       .tap(x => ZIO.debug(x))
       .via(fetchNewsPipeline.transform())
+      .onError(e => Console.printLine(s"Stream failed: ${e}").orDie)
+      .retry(Schedule.fibonacci(10.seconds))
       .run(notifySink.consume)
       .fork
 }
