@@ -42,7 +42,7 @@ object BuildHelper extends ScalaSettings {
     ThisBuild / javaOptions                := Seq(
       s"-DZIOHttpLogLevel=${Debug.ZIOHttpLogLevel}",
     ),
-    ThisBuild / fork                       := true,
+    //ThisBuild / fork                       := true,
   )
 
   def runSettings(className: String = "cc.knowship.subscribe.MainApp") = Seq(
