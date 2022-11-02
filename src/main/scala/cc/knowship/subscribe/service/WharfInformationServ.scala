@@ -3,6 +3,7 @@ package cc.knowship.subscribe.service
 import zio._
 import zio.http.Client
 
+import cc.knowship.subscribe.AppConfig
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 import cc.knowship.subscribe.wharf._
 import cc.knowship.subscribe.util.Constants
@@ -42,17 +43,18 @@ trait WharfInformationServ {
 // https://zio.dev/reference/contextual/zenvironment
 object WharfInformationServ {
 
-  val layer: ZLayer[Client, Nothing, Map[String, WharfInformationServ]] = {
+  val layer: ZLayer[Client with AppConfig, Nothing, Map[String, WharfInformationServ]] = {
 
     ZLayer.fromZIOEnvironment {
       for {
         client <- ZIO.service[Client]
+        config <- ZIO.service[AppConfig]
       } yield {
         ZEnvironment(
           Map(
             "FAKE"  -> FakeWharfInformation(), 
-            "CMG"   -> CmgWharfInformation(client),
-            "NPEDI" -> NpediWharfInformation(client)
+            "CMG"   -> CmgWharfInformation(client, config),
+            "NPEDI" -> NpediWharfInformation(client, config)
           )
         )
       }

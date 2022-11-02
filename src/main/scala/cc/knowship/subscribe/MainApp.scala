@@ -14,10 +14,11 @@ import cc.knowship.subscribe.scheduler._
 object MainApp extends ZIOAppDefault {
 
   val httpApp = for {
+    config     <- ZIO.service[AppConfig]
     subscriber <- SubscriberPartial.routes
     subscribe  <- SubscribePartial.routes
     wharf      <- WharfPartial.routes
-    _          <- FixScheduleStream.start(30.seconds)
+    _          <- FixScheduleStream.start(config.subscribe.loopUnit)
 
     http = (Http.collectZIO[Request] { subscribe.orElse(wharf).orElse(subscriber) }).catchAll { error =>
       scala.Console.err.println(DebugUtils.prettify(error))
@@ -53,5 +54,8 @@ object MainApp extends ZIOAppDefault {
     CheckExpiredPipeline.layer,
     FetchNewsPipeline.layer,
     NotifySink.layer,
+
+    // config
+    AppConfig.layer,
   )
 }

@@ -4,12 +4,12 @@ import zio._
 import zio.json._
 import zio.http.{Client, Request, URL}
 
-import cc.knowship.subscribe.SubscribeException
+import cc.knowship.subscribe.{SubscribeException, AppConfig}
 import cc.knowship.subscribe.util.{Constants, TimeDateUtils}
 import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
-case class NpediWharfInformation(client: Client) extends WharfInformationServ {
+case class NpediWharfInformation(client: Client, config: AppConfig) extends WharfInformationServ {
 
   import SubscribeException._
 
@@ -30,7 +30,7 @@ case class NpediWharfInformation(client: Client) extends WharfInformationServ {
     (vNew.rcvEnd != Constants.DEFAULT_STRING_VALUE && vNew.rcvEnd < currTimeStr)
   }
 
-  lazy val VoyageAPI = URL.fromString("http://127.0.0.1:4427/retrieve/npedi")
+  lazy val VoyageAPI = URL.fromString(config.npedi.scheUrl)
 
   // 不需要做处理，假定传过来的都是真实的
   override def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = {

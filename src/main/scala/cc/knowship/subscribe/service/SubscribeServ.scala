@@ -7,6 +7,7 @@ import zio.http.html._
 import zio.http.model.{Headers}
 import zio.http.{Client, Request, Body, URL}
 
+import cc.knowship.subscribe.AppConfig
 import cc.knowship.subscribe.SubscribeException._
 import cc.knowship.subscribe.db.model.{Subscription, Voyage, Vessel}
 import cc.knowship.subscribe.db.table._
@@ -30,6 +31,7 @@ case class SubscribeServLive(
   subscriptionTb: SubscriptionTb,
   wharfInformationServ: Map[String, WharfInformationServ],
   client: Client,
+  config: AppConfig
 ) extends SubscribeServ {
 
   def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[Html] = for {
@@ -54,7 +56,7 @@ case class SubscribeServLive(
     wharf        <- wharfTb.get(vessel.wharfId)
     wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code)).mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
 
-    pushAPI      = URL.fromString("http://127.0.0.1:8080/mock-push-notify")
+    pushAPI      = URL.fromString(config.subscribe.notifyUrl)
     url          <- ZIO.fromEither(pushAPI).mapError(m => new URLParseFailed(s"$m"))
 
     isFinish     = wharfInfServ.isFinished(voyage)

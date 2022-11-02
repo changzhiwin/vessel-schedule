@@ -4,18 +4,18 @@ import zio._
 import zio.json._
 import zio.http.{Client, Request, URL}
 
-import cc.knowship.subscribe.SubscribeException
+import cc.knowship.subscribe.{SubscribeException, AppConfig}
 import cc.knowship.subscribe.util.Constants
 import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
-case class CmgWharfInformation(client: Client) extends WharfInformationServ {
+case class CmgWharfInformation(client: Client, config: AppConfig) extends WharfInformationServ {
 
   import SubscribeException._
 
-  lazy val VesselAPI = URL.fromString("http://eportapisct.scctcn.com/api/GVesselVoyage")
+  lazy val VesselAPI = URL.fromString(config.cmg.voyUrl)
 
-  lazy val VoyageAPI = URL.fromString("http://eportapisct.scctcn.com/api/VesselSchedule")
+  lazy val VoyageAPI = URL.fromString(config.cmg.scheUrl)
 
   override def voyageOfVessel(vesselName: String, voyageName: String): Task[String] = for {
     url      <- ZIO.fromEither(VesselAPI)
