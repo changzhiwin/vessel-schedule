@@ -9,3 +9,15 @@ Middleware.interceptPatch { req =>
   Patch.empty 
 }
 ```
+
+#### Error Handing
+
+##### Network Error
+```
+[info] Stream application closed! Fail(io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: /127.0.0.1:4427,Stack trace for thread "zio-fiber-":
+```
+
+##### Application Error
+```
+[info] Stream application closed! Fail(cc.knowship.subscribe.SubscribeException$JsonDecodeFailed: NpediScheduleInfoReply,Stack trace for thread "zio-fiber-":
+```
