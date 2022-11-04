@@ -3,6 +3,7 @@ package cc.knowship.subscribe.scheduler
 import zio._
 import zio.stream._
 
+import cc.knowship.subscribe.SubscribeChange
 import cc.knowship.subscribe.SubscribeException._
 import cc.knowship.subscribe.db.model.{Voyage, Subscription}
 import cc.knowship.subscribe.db.table.{VoyageTb, SubscriptionTb, VesselTb, WharfTb}
@@ -17,22 +18,32 @@ case class FetchNewsPipeline(
 ) {
 
   def transform() = 
-    ZPipeline.mapZIO[Any, Throwable, Voyage, Chunk[Subscription]](v => compareToRemoteInfo(v)) >>> 
-    ZPipeline.mapChunks[Chunk[Subscription], Subscription](_.flatten)
+    ZPipeline.mapZIO[Any, Throwable, Voyage, Chunk[SubscribeChange]](v => compareToRemoteInfo(v)) >>>
+    ZPipeline.mapChunks[Chunk[SubscribeChange], SubscribeChange](_.flatten)
 
-  private def compareToRemoteInfo(voyage: Voyage): Task[Chunk[Subscription]] = for {
+  private def compareToRemoteInfo(voyage: Voyage): Task[Chunk[SubscribeChange]] = for {
     vessel       <- vesselTb.get(voyage.vesselId)
     wharf        <- wharfTb.get(vessel.wharfId)
     wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code))
                       .mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
     voyaStatus   <- wharfInfServ.voyageStatus(vessel.shipName, voyage.outVoy)
 
-    voyaUpdate   = voyaStatus._2.copy(id = voyage.id, vesselId = voyage.vesselId, createAt = voyage.createAt)
-    notifySet    <- ZIO.ifZIO(voyageTb.update(voyaUpdate).map(wharfInfServ.isChanged(voyage, _)))(
-                      onTrue  = subscriptionTb.findByVoyage(voyaUpdate.id).map(Chunk.from(_)),
+    voyageVo     = voyaStatus._2.copy(id = voyage.id, vesselId = voyage.vesselId, createAt = voyage.createAt)
+    voyagePo     <- voyageTb.update(voyageVo)
+
+    changedOpt   = wharfInfServ.hasChanged(voyage, voyagePo)
+    finishedOpt  = wharfInfServ.hasFinished(voyagePo)
+    subcptChunk  <- ZIO.ifZIO(ZIO.succeed(changedOpt.nonEmpty))(
+                      onTrue  = subscriptionTb.findByVoyage(voyageVo.id).map(Chunk.from(_)),
                       onFalse = ZIO.succeed(Chunk.empty[Subscription])
                     )
-  } yield notifySet 
+    notifyChunk  <- ZIO.foreach(subcptChunk) { sub =>
+                      finishedOpt match {
+                        case Some(text) => ZIO.succeed(SubscribeChange.Finish(text, sub))
+                        case None       => ZIO.succeed(SubscribeChange.Update(changedOpt.get, sub))
+                      }
+                    }
+  } yield notifyChunk
 }
 
 object FetchNewsPipeline {

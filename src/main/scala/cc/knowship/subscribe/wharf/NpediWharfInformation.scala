@@ -16,8 +16,18 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
   /**
     * 对比计划靠泊、计划离泊、开始进箱、结束进箱时间
     */
-  override def isChanged(vAged: Voyage, vNew: Voyage): Boolean = {
-    (vNew.eta != vAged.eta || vNew.etd != vAged.etd || vNew.rcvEnd != vAged.rcvEnd || vNew.rcvStart != vAged.rcvStart)
+  override def hasChanged(vAged: Voyage, vNew: Voyage): Option[String] = {
+    if (vNew.eta != vAged.eta) {
+      Some(s"ETA [${vNew.eta}]")
+    } else if (vNew.etd != vAged.etd) {
+      Some(s"ETD [${vNew.etd}]")
+    } else if (vNew.rcvEnd != vAged.rcvEnd) {
+      Some(s"Receive End Time [${vNew.rcvEnd}]")
+    } else if (vNew.rcvStart != vAged.rcvStart) {
+      Some(s"Receive Start Time [${vNew.rcvStart}]")
+    } else {
+      None
+    }
   }
 
   /**
@@ -25,9 +35,12 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
     * 假设都是基于东八区的时间
     * eg. 2022-10-31 00:00:01 < 2022-11-01 09:57:19
     */
-  override def isFinished(vNew: Voyage): Boolean = {
+  override def hasFinished(vNew: Voyage): Option[String] = {
     val currTimeStr = TimeDateUtils.currentLocalDateTimeStr
-    (vNew.rcvEnd != Constants.DEFAULT_STRING_VALUE && vNew.rcvEnd < currTimeStr)
+    (vNew.rcvEnd != Constants.DEFAULT_STRING_VALUE && vNew.rcvEnd < currTimeStr) match {
+      case true  => Some(s"Receive Time Is Out Of Date, [${vNew.rcvEnd}]")
+      case false => None
+    }
   }
 
   lazy val VoyageAPI = URL.fromString(config.npedi.scheUrl)

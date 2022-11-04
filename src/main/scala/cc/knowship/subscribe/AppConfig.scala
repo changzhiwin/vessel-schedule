@@ -1,5 +1,7 @@
 package cc.knowship.subscribe
 
+import java.util.Properties
+
 import zio._
 import zio.config._
 import ConfigDescriptor._
@@ -32,7 +34,14 @@ object AppConfig {
       nested("npedi")(wharf)
     ).to[AppConfig]
 
+  def getProperties = {
+    val prop = new Properties()
+    prop.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("application.properties"))
+    prop
+  }
+
   val layer = ZConfig.fromPropertiesFile(
+    // TODO
     "./src/main/resources/application.properties", 
     AppConfig.configuration, 
     Some('.'),
