@@ -67,17 +67,19 @@ case class CmgWharfInformation(client: Client, config: AppConfig) extends WharfI
       terminalCode = s.TerminalCode,
       inVoy = s.invoynbr,
       outVoy = s.outvoynbr,
-      serviceId = s.ServiceId.getOrElse(Constants.DEFAULT_STRING_VALUE), // ++
+      serviceId = s.ServiceId.getOrElse(Constants.DEFAULT_STRING_VALUE),
 
-      rcvStart = Constants.DEFAULT_STRING_VALUE, // 进箱开始时间 Npedi ++
-      rcvEnd = Constants.DEFAULT_STRING_VALUE,   // 进箱结束时间 Npedi ++
+      rcvStart = Constants.DEFAULT_STRING_VALUE,
+      rcvEnd = Constants.DEFAULT_STRING_VALUE,
 
-      eta = s.ETADate.getOrElse(Constants.DEFAULT_STRING_VALUE),
       pob = s.POB.getOrElse(Constants.DEFAULT_STRING_VALUE),
       etb = s.ETB.getOrElse(Constants.DEFAULT_STRING_VALUE),
-      etd = s.ETD.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      
+      eta = s.ETADate.getOrElse(Constants.DEFAULT_STRING_VALUE),
       ata = s.ATA.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      etd = s.ETD.getOrElse(Constants.DEFAULT_STRING_VALUE),
       atd = s.ATD.getOrElse(Constants.DEFAULT_STRING_VALUE),
+      
       notes = s.Notes.getOrElse(Constants.DEFAULT_STRING_VALUE),
 
       id = Constants.DEFAULT_UUID,

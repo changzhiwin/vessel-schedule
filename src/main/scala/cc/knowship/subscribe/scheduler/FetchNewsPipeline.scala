@@ -33,7 +33,7 @@ case class FetchNewsPipeline(
 
     changedOpt   = wharfInfServ.hasChanged(voyage, voyagePo)
     finishedOpt  = wharfInfServ.hasFinished(voyagePo)
-    subcptChunk  <- ZIO.ifZIO(ZIO.succeed(changedOpt.nonEmpty))(
+    subcptChunk  <- ZIO.ifZIO(ZIO.succeed(changedOpt.nonEmpty || finishedOpt.nonEmpty))(
                       onTrue  = subscriptionTb.findByVoyage(voyageVo.id).map(Chunk.from(_)),
                       onFalse = ZIO.succeed(Chunk.empty[Subscription])
                     )

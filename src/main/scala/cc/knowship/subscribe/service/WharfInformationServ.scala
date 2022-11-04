@@ -41,19 +41,55 @@ trait WharfInformationServ {
     }
   }
 
-  /**
-    * 不同码头的显示的视图不一样
-    * @param subscription
-    * @param voyage
-    * @param vessel
-    */
-  def viewOfHtml(subscription: Subscription, voyage: Voyage, vessel: Vessel, wharf: Wharf): Html = {
+  final def viewOfHtml(subscription: Subscription, voyage: Voyage, vessel: Vessel, wharf: Wharf): Html = {
+
+    val extendInfos = Seq(
+      "客户" -> subscription.infos,
+      "码头"    -> wharf.name
+    )
+
+    val vesselInfos = Seq(
+      "船名"    -> vessel.shipName,
+      "中文名"  -> vessel.shipCnName,
+      "UN代码"  -> vessel.unCode,
+      "出口代理" -> vessel.outAgent,
+      "船公司"   -> vessel.company
+    )
+
+    val systemInfos = Seq(
+      "流水号"  -> subscription.id.toString()
+    )
 
     EmailTemplate.container(
       Seq(
-        EmailTemplate.paragraph(s"Action Success. ${vessel.shipName} / ${voyage.outVoy} / ${subscription.infos} / ${wharf.name}")
+        EmailTemplate.paragraph_2cols(extendInfos), 
+        EmailTemplate.paragraph_hr,
+        viewOfSchedule(voyage),
+        EmailTemplate.paragraph_hr,
+        EmailTemplate.paragraph_2cols(vesselInfos),
+        EmailTemplate.paragraph_hr,
+        EmailTemplate.paragraph_2cols(systemInfos)
       )
     )
+  }
+
+  /**
+    * 调度信息的部分显示视图不一样
+    * @param voyage
+    */
+  def viewOfSchedule(voyage: Voyage): Dom = {
+    val scheduleInfos = Seq(
+      "出口航次" -> voyage.outVoy,
+      "港区"    -> voyage.terminalCode,
+
+      "计划靠泊" -> voyage.eta,
+      "实际靠泊" -> voyage.ata,
+      "计划离泊" -> voyage.etd,
+      "实际离泊" -> voyage.atd,
+      "附言"    -> voyage.notes
+    )
+
+    EmailTemplate.paragraph_2cols(scheduleInfos)
   }
 
   /**

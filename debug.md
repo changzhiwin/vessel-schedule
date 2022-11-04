@@ -21,3 +21,9 @@ Middleware.interceptPatch { req =>
 ```
 [info] Stream application closed! Fail(cc.knowship.subscribe.SubscribeException$JsonDecodeFailed: NpediScheduleInfoReply,Stack trace for thread "zio-fiber-":
 ```
+
+##### DB Record
+```
+[error] Cause: 
+[error]  cc.knowship.subscribe.SubscribeException$DbRecordNotFound: Subscription#id c0fb86a2-6ea6-4ad0-adb5-9b964361c04c
+```

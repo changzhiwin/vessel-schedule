@@ -35,7 +35,7 @@ case class SubscribePartialLive(subscriberServ: SubscriberServ, subscribeServ: S
         h ++
         Headers("X-Email-To", form.openId) ++ 
         Headers("X-Email-From", form.receiver) ++ 
-        Headers("X-Email-Subject", "Subscribe success")
+        Headers("X-Email-Subject", "Subscribe Success")
       })
 
     case Method.GET -> !! / "unsubscribe" / id  =>

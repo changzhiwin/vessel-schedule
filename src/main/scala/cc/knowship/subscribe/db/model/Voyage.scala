@@ -15,12 +15,13 @@ final case class Voyage(
   rcvStart: String,      // Npedi#ctnstart
   rcvEnd: String,        // Npedi#ctnend
 
-  eta: String,           // ETADate
   pob: String,           // POB
   etb: String,           // ETB
-  etd: String,           // ETD
-  ata: String,           // ATA
-  atd: String,           // ATD 有这个属性后，可以不在关注动态
+
+  eta: String,           // ETADate  计划靠泊时间
+  ata: String,           // ATA      实际靠泊时间
+  etd: String,           // ETD      计划离泊时间
+  atd: String,           // ATD      实际离泊时间，有这个属性后，默认不在关注动态
 
   notes: String,         // Notes，附言
 

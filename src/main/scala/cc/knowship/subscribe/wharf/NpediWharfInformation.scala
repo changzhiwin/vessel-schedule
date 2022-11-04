@@ -3,9 +3,10 @@ package cc.knowship.subscribe.wharf
 import zio._
 import zio.json._
 import zio.http.{Client, Request, URL}
+import zio.http.html._
 
 import cc.knowship.subscribe.{SubscribeException, AppConfig}
-import cc.knowship.subscribe.util.{Constants, TimeDateUtils}
+import cc.knowship.subscribe.util.{Constants, TimeDateUtils, EmailTemplate}
 import cc.knowship.subscribe.service.WharfInformationServ
 import cc.knowship.subscribe.db.model.{Vessel, Voyage}
 
@@ -41,6 +42,21 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
       case true  => Some(s"Receive Time Is Out Of Date, [${vNew.rcvEnd}]")
       case false => None
     }
+  }
+
+  override def viewOfSchedule(voyage: Voyage): Dom = {
+    val scheduleInfos = Seq(
+      "出口航次" -> voyage.outVoy,
+      "港区" -> voyage.terminalCode,
+
+      "计划靠泊" -> voyage.eta,
+      "计划离泊" -> voyage.etd,
+      "进箱公告" -> (voyage.notes match { case "Y" => "有"; case _   => "无"; }),
+      "进箱开始" -> voyage.rcvStart,
+      "进箱结束" -> voyage.rcvEnd,
+    )
+
+    EmailTemplate.paragraph_2cols(scheduleInfos)
   }
 
   lazy val VoyageAPI = URL.fromString(config.npedi.scheUrl)
@@ -88,7 +104,7 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
 
     val rcv = s.published match {
       case "Y" => (s.ctnStartTime, s.ctnEndTime)
-      case "N" => (Constants.DEFAULT_STRING_VALUE, Constants.DEFAULT_STRING_VALUE)
+      case _   => (Constants.DEFAULT_STRING_VALUE, Constants.DEFAULT_STRING_VALUE)
     }
 
     val voyage = Voyage(

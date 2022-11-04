@@ -11,6 +11,8 @@ import cc.knowship.subscribe.{AppConfig, SubscribeChange}
 import cc.knowship.subscribe.SubscribeException._
 import cc.knowship.subscribe.db.table._
 import cc.knowship.subscribe.service.WharfInformationServ
+import cc.knowship.subscribe.util.EmailTemplate
+import cc.knowship.subscribe.db.model.{Wharf, Vessel, Voyage, Subscription}
 
 trait SubscribeServ {
 
@@ -38,7 +40,7 @@ case class SubscribeServLive(
     selectedVoy  <- wharfInfServ.voyageOfVessel(vessel, voyage)
     twoRecord    <- voyageTb.findByShipNameAndOutVoy(vessel, selectedVoy).someOrElseZIO {
                       for {
-                        twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).debug("Fetched")
+                        twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).retry(Schedule.spaced(10.seconds) && Schedule.recurs(2)).debug("Fetched")
                         vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id)
                         voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id)
                       } yield (vesselObj, voyageObj)
@@ -72,15 +74,36 @@ case class SubscribeServLive(
     voyage       <- voyageTb.get(subscription.voyageId)
     vessel       <- vesselTb.get(voyage.vesselId)
     wharf        <- wharfTb.get(vessel.wharfId)
-    wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code)).mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
     _            <- mayDeleteLastSubscribeOnVoyage(subscription.id, voyage.id, vessel.id)
-  } yield wharfInfServ.viewOfHtml(subscription, voyage, vessel, wharf)
+  } yield cacelViewOfHtml(subscription, voyage, vessel, wharf)
 
   private def mayDeleteLastSubscribeOnVoyage(subscriptionId: UUID, voyageId: UUID, vesselId: UUID): Task[Unit] = for {
     _ <- subscriptionTb.delete(subscriptionId)
     _ <- voyageTb.delete(voyageId).whenZIO(subscriptionTb.nonVoyageExist(voyageId))
     _ <- vesselTb.delete(vesselId).whenZIO(voyageTb.nonVesselExist(vesselId))
   } yield ()
+
+  private def cacelViewOfHtml(subscription: Subscription, voyage: Voyage, vessel: Vessel, wharf: Wharf): Html = {
+
+    val extendInfos = Seq(
+      "系统消息" -> "取消成功",
+    )
+
+    val cancelInfos = Seq(
+      "码头" -> wharf.name,
+      "船名" -> vessel.shipName,
+      "航次" -> voyage.outVoy,
+      "客户" -> subscription.infos,
+    )
+
+    EmailTemplate.container( 
+      Seq( 
+        EmailTemplate.paragraph_2cols(extendInfos),
+        EmailTemplate.paragraph_hr,
+        EmailTemplate.paragraph_2cols(cancelInfos) 
+      )
+    )
+  }
 }
 
 object SubscribeServLive {

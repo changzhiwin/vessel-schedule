@@ -4,16 +4,8 @@ import zio.http.html._
 
 object EmailTemplate {
 
-  import Attributes._
-
-  // extend attributes
-  final def xmlnsAttr: PartialAttribute[String] = PartialAttribute("xmlns")
-
-  final def cellpaddingAttr: PartialAttribute[String] = PartialAttribute("cellpadding")
-
-  final def cellspacingAttr: PartialAttribute[String] = PartialAttribute("cellspacing")
-
   //"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">""" + container(trs).encode
+  
   /**
     * 邮件布局
     * @param paragraphs 允许多个段落
