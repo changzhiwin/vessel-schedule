@@ -16,11 +16,13 @@ import cc.knowship.subscribe.db.model.{Wharf, Vessel, Voyage, Subscription}
 
 trait SubscribeServ {
 
-  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[Html] 
+  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[(String, Html)] 
 
   def noitfy(change: SubscribeChange): Task[Unit]
 
   def cancel(subscriptionId: UUID): Task[Html]
+
+  def welcome: Task[Html]
 }
 
 case class SubscribeServLive(
@@ -34,7 +36,7 @@ case class SubscribeServLive(
   config: AppConfig
 ) extends SubscribeServ {
 
-  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[Html] = for {
+  def registe(subscriberId: UUID, wharfCode: String, vessel: String, voyage: String, infos: String): Task[(String, Html)] = for {
     wharf        <- wharfTb.findByCode(wharfCode)
     wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code)).mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
     selectedVoy  <- wharfInfServ.voyageOfVessel(vessel, voyage)
@@ -46,7 +48,7 @@ case class SubscribeServLive(
                       } yield (vesselObj, voyageObj)
                     }
     subscription <- subscriptionTb.updateOrCreate(subscriberId, twoRecord._2.id, infos)
-  } yield wharfInfServ.viewOfHtml(subscription, twoRecord._2, twoRecord._1, wharf)
+  } yield ( (s"[${twoRecord._1.shipName}/${twoRecord._2.outVoy}]@${subscription.id.toString}") -> wharfInfServ.viewOfHtml(subscription, twoRecord._2, twoRecord._1, wharf))
 
   // 优化TODO: 可以按照voyage聚合之后，发通知；这样可以减少对vessel、voyage、wharf的查询
   def noitfy(change: SubscribeChange): Task[Unit]= for {
@@ -76,6 +78,26 @@ case class SubscribeServLive(
     wharf        <- wharfTb.get(vessel.wharfId)
     _            <- mayDeleteLastSubscribeOnVoyage(subscription.id, voyage.id, vessel.id)
   } yield cacelViewOfHtml(subscription, voyage, vessel, wharf)
+
+  def welcome: Task[Html]= {
+
+    val extendInfos = Seq(
+      "订阅格式" -> "= 船名 / 航次 / 客户信息 / 码头 =",
+      "订阅示例" -> "= DANUM 175 / 2244S / 景图 / CMG =",
+      "订阅示例" -> "= MSC TERESA / FK245A / noor / NPEDI =",
+      "取消格式" -> "回复(Re)收到的邮件即可，内容不限"
+    )
+
+    val body = EmailTemplate.container( 
+      Seq( 
+        EmailTemplate.paragraph("欢迎，来到船名/航次订阅系统"),
+        EmailTemplate.paragraph_hr,
+        EmailTemplate.paragraph_2cols(extendInfos) 
+      )
+    )
+
+    ZIO.succeed(body)
+  }
 
   private def mayDeleteLastSubscribeOnVoyage(subscriptionId: UUID, voyageId: UUID, vesselId: UUID): Task[Unit] = for {
     _ <- subscriptionTb.delete(subscriptionId)

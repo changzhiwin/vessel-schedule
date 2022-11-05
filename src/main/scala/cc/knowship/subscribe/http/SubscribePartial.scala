@@ -31,18 +31,35 @@ case class SubscribePartialLive(subscriberServ: SubscriberServ, subscribeServ: S
         form       <- ZIO.fromEither(body.fromJson[SubscribeForm]).mapError(_ => JsonDecodeFailed("SubscribeForm"))
         subscriber <- subscriberServ.findOrCreate(form.openId, form.source, form.receiver, form.nicknameValue)
         content    <- subscribeServ.registe(subscriber.id, form.wharfCode, form.vessel, form.voyageValue, form.infosValue)
-      } yield Response.html(content).updateHeaders(h => {
+      } yield Response.html(content._2).updateHeaders(h => {
         h ++
         Headers("X-Email-To", form.openId) ++ 
         Headers("X-Email-From", form.receiver) ++ 
-        Headers("X-Email-Subject", "Subscribe Success")
+        Headers("X-Email-Subject", "Subscribe: " + content._1)
       })
 
-    case Method.GET -> !! / "unsubscribe" / id  =>
-      subscribeServ.cancel(UUID.fromString(id)).map(content => Response.html(content))
+    case req @ Method.GET -> !! / "unsubscribe" / id  =>
+      subscribeServ
+        .cancel(UUID.fromString(id))
+        .map(content => Response.html(content).updateHeaders(h => addHeaders(req, h, "Unsubscribe Success")))
 
-    case req @ Method.POST -> !! / "mock-push-notify" =>
+    case req @ Method.GET -> !! / "welcome"  =>
+      subscribeServ
+        .welcome
+        .map(content => Response.html(content).updateHeaders(h => addHeaders(req, h, "Welcome")))
+
+    case req @ Method.POST -> !! / "mock-notify" =>
       ZIO.succeed(Response.text(req.headers.toList.mkString("[", ",", "]")))
+  }
+
+  private def addHeaders(req: Request, h: Headers, subject: String): Headers = {
+    val from = req.url.queryParams.get("from").map(_.head).getOrElse("nobody@abc.com")
+    val to = req.url.queryParams.get("to").map(_.head).getOrElse("error@abc.com")
+
+    h ++
+    Headers("X-Email-To", from) ++ 
+    Headers("X-Email-From", to) ++ 
+    Headers("X-Email-Subject", subject)
   }
 }
 

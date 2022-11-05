@@ -56,9 +56,7 @@ trait WharfInformationServ {
       "船公司"   -> vessel.company
     )
 
-    val systemInfos = Seq(
-      "流水号"  -> subscription.id.toString()
-    )
+    //val systemInfos = Seq("流水号"  -> subscription.id.toString())
 
     EmailTemplate.container(
       Seq(
@@ -67,8 +65,6 @@ trait WharfInformationServ {
         viewOfSchedule(voyage),
         EmailTemplate.paragraph_hr,
         EmailTemplate.paragraph_2cols(vesselInfos),
-        EmailTemplate.paragraph_hr,
-        EmailTemplate.paragraph_2cols(systemInfos)
       )
     )
   }
