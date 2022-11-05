@@ -43,13 +43,13 @@ case class SubscribePartialLive(subscriberServ: SubscriberServ, subscribeServ: S
         .cancel(UUID.fromString(id))
         .map(content => Response.html(content).updateHeaders(h => addHeaders(req, h, "Unsubscribe Success")))
 
+    case req @ Method.POST -> !! / "mock-notify" =>
+      ZIO.succeed(Response.text(req.headers.toList.mkString("[", ",", "]")))
+
     case req @ Method.GET -> !! / "welcome"  =>
       subscribeServ
         .welcome
         .map(content => Response.html(content).updateHeaders(h => addHeaders(req, h, "Welcome")))
-
-    case req @ Method.POST -> !! / "mock-notify" =>
-      ZIO.succeed(Response.text(req.headers.toList.mkString("[", ",", "]")))
   }
 
   private def addHeaders(req: Request, h: Headers, subject: String): Headers = {
