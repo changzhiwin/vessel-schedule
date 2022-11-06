@@ -56,7 +56,7 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
       "进箱结束" -> voyage.rcvEnd,
     )
 
-    EmailTemplate.paragraph_2cols(scheduleInfos)
+    EmailTemplate.paragraph_2cols(scheduleInfos, None)
   }
 
   lazy val VoyageAPI = URL.fromString(config.npedi.scheUrl)

@@ -88,7 +88,7 @@ final case class SubscribeForm(
       }
     }
   }
-  def wharfCode: String = wharf.getOrElse("FAKE")
+  def wharfCode: String = wharf.getOrElse("SK").toUpperCase
   def infosValue: String = infos.getOrElse("-")
   def voyageValue: String = voyage.getOrElse("-")
 }

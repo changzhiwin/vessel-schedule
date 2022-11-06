@@ -55,16 +55,15 @@ trait WharfInformationServ {
       "出口代理" -> vessel.outAgent,
       "船公司"   -> vessel.company
     )
-
     //val systemInfos = Seq("流水号"  -> subscription.id.toString())
 
     EmailTemplate.container(
       Seq(
-        EmailTemplate.paragraph_2cols(extendInfos), 
+        EmailTemplate.paragraph_2cols(extendInfos, None), 
         EmailTemplate.paragraph_hr,
         viewOfSchedule(voyage),
         EmailTemplate.paragraph_hr,
-        EmailTemplate.paragraph_2cols(vesselInfos),
+        EmailTemplate.paragraph_2cols(vesselInfos, None),
       )
     )
   }
@@ -85,7 +84,7 @@ trait WharfInformationServ {
       "附言"    -> voyage.notes
     )
 
-    EmailTemplate.paragraph_2cols(scheduleInfos)
+    EmailTemplate.paragraph_2cols(scheduleInfos, None)
   }
 
   /**
@@ -118,8 +117,8 @@ object WharfInformationServ {
         ZEnvironment(
           Map(
             "FAKE"  -> FakeWharfInformation(), 
-            "CMG"   -> CmgWharfInformation(client, config),
-            "NPEDI" -> NpediWharfInformation(client, config)
+            "SK"   -> CmgWharfInformation(client, config),
+            "NB" -> NpediWharfInformation(client, config)
           )
         )
       }

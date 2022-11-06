@@ -45,18 +45,21 @@ object EmailTemplate {
 
     EmailTemplate.container(
       Seq(
-        EmailTemplate.paragraph(s"抱歉，系统有异常；请检查输入，或5分钟后再试。"),
+        EmailTemplate.paragraph("系统异常通知!!", Some(Seq("color" -> "red"))),
         EmailTemplate.paragraph_hr,
-        EmailTemplate.paragraph_2cols(extendInfos)
+        EmailTemplate.paragraph_2cols(extendInfos, Some(Seq("width" -> "20%")))
       )
     )
   } 
 
   private val lineStyles = Seq("margin-left" -> "0", "margin-right" -> "0", "font-size" -> "15px")
 
-  def paragraph(content: String): Dom = {
+  def paragraph(content: String, sty: Option[Seq[(String, String)]]): Dom = {
+
+    val styCustom = sty.getOrElse(Seq.empty)
+
     tr(
-      styles := Seq("vertical-align" -> "middle", "text-align" -> "center"),
+      styles := Seq("vertical-align" -> "middle", "text-align" -> "center") ++ styCustom,
       td(
         p(styles := lineStyles, content)
       )
@@ -83,7 +86,9 @@ object EmailTemplate {
     )
   }
 
-  def paragraph_2cols(dataList: Seq[(String, String)]): Dom = {
+  def paragraph_2cols(dataList: Seq[(String, String)], tdSty: Option[Seq[(String, String)]]): Dom = {
+    val tdCustom = tdSty.getOrElse(Seq.empty)
+
     tr(
       styles := Seq("vertical-align" -> "middle", "text-align" -> "center"),
       td(
@@ -96,8 +101,11 @@ object EmailTemplate {
             tr(
               td(
                 // #87CEFA  #66CDAA
-                styles := Seq("background-color" -> "#87CEFA", "vertical-align" -> "middle", "text-align" -> "center"),
-                p(styles := lineStyles, item._1)
+                styles := Seq("background-color" -> "#87CEFA") ++ tdCustom,
+                p(
+                  styles := lineStyles ++ Seq("vertical-align" -> "middle", "text-align" -> "center"), 
+                  item._1
+                )
               ),
               td(
                 p(

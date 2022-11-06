@@ -24,7 +24,9 @@ object MainApp extends ZIOAppDefault {
       scala.Console.err.println(DebugUtils.prettify(error))
       config.subscribe.env match {
         case "dev" => Http.response( HttpError.InternalServerError(cause = Some(error)).toResponse ) @@ Middleware.beautifyErrors
-        case _     => Http.html(EmailTemplate.errorEmail(error.getMessage))
+        case _     => Http.html(EmailTemplate.errorEmail(error.getMessage)).updateHeaders(h => {
+          h ++ Headers("X-Email-To", "changzhiwin@qq.com") ++ Headers("X-Email-Subject", "System Error")
+        })
       }
     }
     _ <- Server.serve(http)

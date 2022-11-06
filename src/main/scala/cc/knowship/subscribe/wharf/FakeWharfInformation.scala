@@ -59,7 +59,7 @@ case class FakeWharfInformation() extends WharfInformationServ {
     )
 
     for {
-      attr <- Random.nextIntBetween(0, 3).map(CareAttribute.apply(_))
+      attr <- Random.nextIntBetween(0, 5).map(CareAttribute.apply(_))
       now   <- Clock.currentTime(TimeUnit.MILLISECONDS)
     } yield {
       val timeStr = TimeDateUtils.epochMilliToString(now)

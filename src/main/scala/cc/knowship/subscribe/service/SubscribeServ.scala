@@ -83,16 +83,17 @@ case class SubscribeServLive(
 
     val extendInfos = Seq(
       "订阅格式" -> "= 船名 / 航次 / 客户信息 / 码头 =",
-      "订阅示例" -> "= DANUM 175 / 2244S / 景图 / CMG =",
-      "订阅示例" -> "= MSC TERESA / FK245A / noor / NPEDI =",
-      "取消格式" -> "回复(Re)收到的邮件即可，内容不限"
+      "格式说明" -> "独占一行，前后都有=号，中间/号分隔",
+      "订阅示例" -> "= DANUM 175 / 2244S / 景图 / LB =",
+      "支持码头" -> "LB-宁波，SK-蛇口",
+      "取消方式" -> "回复(Re)收到的邮件即可，内容不限"
     )
 
     val body = EmailTemplate.container( 
       Seq( 
-        EmailTemplate.paragraph("欢迎，来到船名/航次订阅系统"),
+        EmailTemplate.paragraph("欢迎，来到船名/航次订阅系统", Some(Seq("color" -> "firebrick"))),
         EmailTemplate.paragraph_hr,
-        EmailTemplate.paragraph_2cols(extendInfos) 
+        EmailTemplate.paragraph_2cols(extendInfos, Some(Seq("width" -> "20%")))
       )
     )
 
@@ -120,9 +121,9 @@ case class SubscribeServLive(
 
     EmailTemplate.container( 
       Seq( 
-        EmailTemplate.paragraph_2cols(extendInfos),
+        EmailTemplate.paragraph_2cols(extendInfos, None),
         EmailTemplate.paragraph_hr,
-        EmailTemplate.paragraph_2cols(cancelInfos) 
+        EmailTemplate.paragraph_2cols(cancelInfos, None) 
       )
     )
   }
