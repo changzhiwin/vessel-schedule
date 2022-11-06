@@ -16,11 +16,11 @@ case class FixScheduleStream(
   def start(period: Duration) = 
     ZStream
       .fromSchedule(Schedule.fixed(period))
-      .tap(x => Console.printLine(s"Pipeline, it's $x times"))
+      .tap(x => ZIO.debug(s"Pipeline, it's $x times"))
       .via(checkExpiredPipeline.transform())
       .tap(x => ZIO.debug(x))
       .via(fetchNewsPipeline.transform())
-      .onError(e => Console.printLine(s"Stream failed: ${e}").orDie)
+      .onError(e => ZIO.log(s"Stream failed: ${e}"))
       .retry(Schedule.fibonacci(10.seconds))
       .run(notifySink.consume)
       .fork

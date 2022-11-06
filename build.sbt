@@ -2,6 +2,8 @@ import BuildHelper._
 import Dependencies._
 
 lazy val root = (project in file("."))
+  //.enablePlugins(JavaAppPackaging)
+  .enablePlugins(JavaServerAppPackaging)
   .settings(stdSettings("root"))
   .settings(publishSetting(false))
   .settings(runSettings(Debug.Main))

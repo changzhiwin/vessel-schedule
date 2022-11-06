@@ -37,10 +37,26 @@ object EmailTemplate {
     )
   }
 
+  def errorEmail(message: String): Html = {
+
+    val extendInfos = Seq(
+      "详情" -> message
+    )
+
+    EmailTemplate.container(
+      Seq(
+        EmailTemplate.paragraph(s"抱歉，系统有异常；请检查输入，或5分钟后再试。"),
+        EmailTemplate.paragraph_hr,
+        EmailTemplate.paragraph_2cols(extendInfos)
+      )
+    )
+  } 
+
   private val lineStyles = Seq("margin-left" -> "0", "margin-right" -> "0", "font-size" -> "15px")
 
   def paragraph(content: String): Dom = {
     tr(
+      styles := Seq("vertical-align" -> "middle", "text-align" -> "center"),
       td(
         p(styles := lineStyles, content)
       )

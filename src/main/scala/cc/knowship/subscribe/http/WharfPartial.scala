@@ -41,6 +41,13 @@ case class WharfPartialLive(wharfTb: WharfTb) extends WharfPartial {
         wharf <- wharfTb.create(buildModel(form))
       } yield Response.json(wharf.toJson)
 
+    case req @ Method.POST -> !! / "wharf" / id =>
+      for {
+        body  <- req.body.asString
+        form  <- ZIO.fromEither(body.fromJson[WharfForm].left.map(new Error(_)))
+        wharf <- wharfTb.update(UUID.fromString(id), buildModel(form))
+      } yield Response.json(wharf.toJson)
+
     case Method.DELETE -> !! / "wharf" / id   =>
       wharfTb.delete(UUID.fromString(id)).map(_ => Response.ok)
   }
@@ -53,7 +60,8 @@ case class WharfPartialLive(wharfTb: WharfTb) extends WharfPartial {
     period = form.period.getOrElse(900000),         // 默认15分钟 = 15 * 60 * 1000
     workStart = form.workStart.getOrElse(21600000), // 默认，早晨6点 = 6 * 60 * 60 * 1000
     workEnd = form.workEnd.getOrElse(84600000),      // 默认，晚上23:30 = (23 * 60 + 30) * 60 * 1000
-    createAt = Constants.DEFAULT_EPOCH_MILLI
+    createAt = Constants.DEFAULT_EPOCH_MILLI,
+    updateAt = Constants.DEFAULT_EPOCH_MILLI
   )
 }
 

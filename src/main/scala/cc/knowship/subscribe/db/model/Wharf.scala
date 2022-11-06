@@ -14,6 +14,7 @@ final case class Wharf(
   workStart: Long, // 开始工作的时间，以零点为基准的相对毫秒数
   workEnd: Long,   // 停止工作的时间
   createAt: Long,
+  updateAt: Long,
 )
 
 object Wharf {

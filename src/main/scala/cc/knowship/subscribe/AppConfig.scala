@@ -6,11 +6,11 @@ import zio._
 import zio.config._
 import ConfigDescriptor._
 
-final case class SubscribeConfig(bindPort: Int, loopUnit: Duration, notifyUrl: String)
+final case class SubscribeConfig(bindPort: Int, loopUnit: Duration, notifyUrl: String, env: String)
 
 object SubscribeConfig {
   val configuration: ConfigDescriptor[SubscribeConfig] =
-    (int("bindPort") zip zioDuration("loopUnit") zip string("notifyUrl")).to[SubscribeConfig]
+    (int("bindPort") zip zioDuration("loopUnit") zip string("notifyUrl") zip string("env")).to[SubscribeConfig]
 }
 
 final case class WharfConfig(voyUrl: String, scheUrl: String)
@@ -42,7 +42,7 @@ object AppConfig {
 
   val layer = ZConfig.fromPropertiesFile(
     // TODO
-    "./src/main/resources/application.properties", 
+    "./conf/application.properties", 
     AppConfig.configuration, 
     Some('.'),
     Some(',')

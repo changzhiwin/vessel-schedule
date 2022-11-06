@@ -15,6 +15,8 @@ trait WharfTb {
 
   def create(bareWharf: Wharf): Task[Wharf]
 
+  def update(id: UUID, bareWharf: Wharf): Task[Wharf]
+
   def findByCode(code: String): Task[Wharf]
 
   def all: Task[List[Wharf]]
@@ -27,18 +29,25 @@ trait WharfTb {
 
 final case class WharfTbLive(
   dataSource: DataSource
-) extends WharfTb {
+) extends WharfTb { self =>
   
   import QuillContext._
   implicit val env = Implicit(dataSource)
 
-  //def create(name: String, code: String, website: String): Task[Wharf] = for {
   def create(bareWharf: Wharf): Task[Wharf] = for {
     id     <- Random.nextUUID
     now    <- Clock.currentTime(TimeUnit.MILLISECONDS)
 
-    wharf = bareWharf.copy(id = id, createAt = now)
+    wharf = bareWharf.copy(id = id, createAt = now, updateAt = now)
     _ <- run(query[Wharf].insertValue(lift(wharf))).implicitly
+  } yield wharf
+
+  def update(id: UUID, bareWharf: Wharf): Task[Wharf] = for {
+    now      <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    wharfOld <- self.get(id)
+
+    wharf = bareWharf.copy(id = wharfOld.id, createAt = wharfOld.createAt, updateAt = now)
+    _ <- run(query[Wharf].filter(_.id == lift(id)).updateValue(lift(wharf))).implicitly
   } yield wharf
 
   def findByCode(code: String): Task[Wharf] = 

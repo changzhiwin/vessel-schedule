@@ -4,7 +4,7 @@ import zio._
 import zio.http._
 import zio.http.model._
 
-import cc.knowship.subscribe.util.DebugUtils
+import cc.knowship.subscribe.util.{DebugUtils, EmailTemplate}
 import cc.knowship.subscribe.db.QuillContext
 import cc.knowship.subscribe.db.table.{SubscriberTbLive, SubscriptionTbLive, VesselTbLive, VoyageTbLive, WharfTbLive}
 import cc.knowship.subscribe.http._
@@ -22,7 +22,10 @@ object MainApp extends ZIOAppDefault {
 
     http = (Http.collectZIO[Request] { subscribe.orElse(wharf).orElse(subscriber) }).catchAll { error =>
       scala.Console.err.println(DebugUtils.prettify(error))
-      Http.response( HttpError.InternalServerError(cause = Some(error)).toResponse ) @@ Middleware.beautifyErrors
+      config.subscribe.env match {
+        case "dev" => Http.response( HttpError.InternalServerError(cause = Some(error)).toResponse ) @@ Middleware.beautifyErrors
+        case _     => Http.html(EmailTemplate.errorEmail(error.getMessage))
+      }
     }
     _ <- Server.serve(http)
   } yield ()

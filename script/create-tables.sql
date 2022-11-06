@@ -63,5 +63,6 @@ CREATE TABLE IF NOT EXISTS Wharf(
   period INTEGER,
   work_start INTEGER,
   work_end INTEGER,
-  create_at INTEGER
+  create_at INTEGER,
+  update_at INTEGER
 );
