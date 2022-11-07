@@ -1,10 +1,15 @@
 import BuildHelper._
 import Dependencies._
 
+ThisBuild / version          := "2.0.1"
+ThisBuild / organizationName := "knowship"
+
+maintainer := "changzhiwin@gmail.com"
+
 lazy val root = (project in file("."))
   //.enablePlugins(JavaAppPackaging)
   .enablePlugins(JavaServerAppPackaging)
-  .settings(stdSettings("root"))
+  .settings(stdSettings("vessel-schedule"))
   .settings(publishSetting(false))
   .settings(runSettings(Debug.Main))
   .settings(
