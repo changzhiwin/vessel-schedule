@@ -21,6 +21,8 @@ object TimeDateUtils {
 
   def currentLocalDateTimeStr: String = localDateTimeToStr(LocalDateTime.now()) // epochMilliToString(System.currentTimeMillis())
 
+  def currentLocalDateStr: String = localDateTimeToStr(LocalDateTime.now(), "yyyyMMdd")
+
   def isWorkingTime(when: Long, offsetStart: Long, offsetEnd: Long): Boolean = {
     // 取当天凌晨零点进行对比
     val ldt = LocalDateTime.of(LocalDate.now(ZoneId.of("Asia/Shanghai")), LocalTime.of(0, 0, 0))

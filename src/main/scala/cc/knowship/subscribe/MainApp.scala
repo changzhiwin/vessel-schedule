@@ -8,7 +8,7 @@ import zio.http._
 import zio.http.model._
 import zio.logging.{ LogFormat, file }
 
-import cc.knowship.subscribe.util.{DebugUtils, EmailTemplate}
+import cc.knowship.subscribe.util.{DebugUtils, EmailTemplate, TimeDateUtils}
 import cc.knowship.subscribe.db.QuillContext
 import cc.knowship.subscribe.db.table.{SubscriberTbLive, SubscriptionTbLive, VesselTbLive, VoyageTbLive, WharfTbLive}
 import cc.knowship.subscribe.http._
@@ -82,7 +82,7 @@ object MainApp extends ZIOAppDefault {
 
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
     Runtime.removeDefaultLoggers >>> file(
-      destination = Paths.get("./logs/app.out"), 
+      destination = Paths.get(s"./logs/app_${TimeDateUtils.currentLocalDateStr}.log"), 
       format = logformat,
       logLevel = LogLevel.Info
     )

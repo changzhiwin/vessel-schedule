@@ -77,10 +77,10 @@ trait WharfInformationServ {
       "出口航次" -> voyage.outVoy,
       "港区"    -> voyage.terminalCode,
 
-      "计划靠泊" -> voyage.eta,
-      "实际靠泊" -> voyage.ata,
-      "计划离泊" -> voyage.etd,
-      "实际离泊" -> voyage.atd,
+      "ETA" -> voyage.eta,
+      "ATA" -> voyage.ata,
+      "ETD" -> voyage.etd,
+      "ATD" -> voyage.atd,
       "附言"    -> voyage.notes
     )
 

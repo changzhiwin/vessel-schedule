@@ -49,8 +49,8 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
       "出口航次" -> voyage.outVoy,
       "港区" -> voyage.terminalCode,
 
-      "计划靠泊" -> voyage.eta,
-      "计划离泊" -> voyage.etd,
+      "ETA" -> voyage.eta,
+      "ETD" -> voyage.etd,
       "进箱公告" -> (voyage.notes match { case "Y" => "有"; case _   => "无"; }),
       "进箱开始" -> voyage.rcvStart,
       "进箱结束" -> voyage.rcvEnd,
