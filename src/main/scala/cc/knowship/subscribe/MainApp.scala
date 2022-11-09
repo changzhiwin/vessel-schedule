@@ -1,9 +1,12 @@
 package cc.knowship.subscribe
 
+import java.nio.file.{Paths}
+import java.time.format.DateTimeFormatter
+
 import zio._
 import zio.http._
 import zio.http.model._
-import zio.logging.{ LogFormat, console }
+import zio.logging.{ LogFormat, file }
 
 import cc.knowship.subscribe.util.{DebugUtils, EmailTemplate}
 import cc.knowship.subscribe.db.QuillContext
@@ -65,6 +68,22 @@ object MainApp extends ZIOAppDefault {
     AppConfig.layer,
   )
 
+  import LogFormat._
+
+  private val logformat =
+    bracketStart |-| 
+      timestamp(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).fixed(19) |-| 
+      level  |-| 
+    bracketEnd |-| 
+    line |-| 
+    //annotation(LogAnnotation.TraceId) |-| 
+    spans |-| 
+    cause
+
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
-    Runtime.removeDefaultLoggers >>> console(LogFormat.default)
+    Runtime.removeDefaultLoggers >>> file(
+      destination = Paths.get("./logs/app.out"), 
+      format = logformat,
+      logLevel = LogLevel.Info
+    )
 }

@@ -26,7 +26,12 @@ case class FetchNewsPipeline(
     wharf        <- wharfTb.get(vessel.wharfId)
     wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code))
                       .mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
-    voyaStatus   <- wharfInfServ.voyageStatus(vessel.shipName, voyage.outVoy)
+    voyaStatus   <- ZIO.logSpan("schedule") {
+                      for {
+                        ret <- wharfInfServ.voyageStatus(vessel.shipName, voyage.outVoy)
+                        _   <- ZIO.log("fetched")
+                      } yield ret
+                    }
 
     voyageVo     = voyaStatus._2.copy(id = voyage.id, vesselId = voyage.vesselId, createAt = voyage.createAt)
     voyagePo     <- voyageTb.update(voyageVo)

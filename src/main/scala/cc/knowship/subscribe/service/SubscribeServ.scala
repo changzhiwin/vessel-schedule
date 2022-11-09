@@ -44,7 +44,7 @@ case class SubscribeServLive(
                       ZIO.logSpan("registe") {
                         for {
                           twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).retry(Schedule.spaced(10.seconds) && Schedule.recurs(2))
-                          _         <- ZIO.log(s"Fetch, ${twoBares._1}, ${twoBares._2}")
+                          _         <- ZIO.log(s"fetched, ${twoBares._1}, ${twoBares._2}")
                           vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id)
                           voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id)
                         } yield (vesselObj, voyageObj)
