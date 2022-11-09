@@ -1,6 +1,7 @@
 package cc.knowship.subscribe.scheduler
 
 import zio._
+import zio.json._
 import zio.stream._
 
 case class FixScheduleStream(
@@ -16,11 +17,11 @@ case class FixScheduleStream(
   def start(period: Duration) = 
     ZStream
       .fromSchedule(Schedule.fixed(period))
-      .tap(x => ZIO.debug(s"Pipeline, it's $x times"))
+      .tap(x => ZIO.log(s"Pipeline, it's $x times"))
       .via(checkExpiredPipeline.transform())
-      .tap(x => ZIO.debug(x))
+      .tap(x => ZIO.log(x.toJson))
       .via(fetchNewsPipeline.transform())
-      .onError(e => ZIO.log(s"Stream failed: ${e}"))
+      .onError(e => ZIO.logError(s"Stream failed, ${e}"))
       .retry(Schedule.fibonacci(10.seconds))
       .run(notifySink.consume)
       .fork

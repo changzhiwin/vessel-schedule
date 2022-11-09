@@ -4,6 +4,7 @@ import java.util.Properties
 
 import zio._
 import zio.config._
+import zio.config.typesafe.TypesafeConfigSource
 import ConfigDescriptor._
 
 final case class SubscribeConfig(bindPort: Int, loopUnit: Duration, notifyUrl: String, env: String)
@@ -40,11 +41,7 @@ object AppConfig {
     prop
   }
 
-  val layer = ZConfig.fromPropertiesFile(
-    // TODO
-    "./conf/application.properties", 
-    AppConfig.configuration, 
-    Some('.'),
-    Some(',')
-  )
+  val layer = ZLayer {
+    read(AppConfig.configuration.from(TypesafeConfigSource.fromResourcePath))
+  }
 }

@@ -41,11 +41,14 @@ case class SubscribeServLive(
     wharfInfServ <- ZIO.fromOption(wharfInformationServ.get(wharf.code)).mapError(_ => WharfInfServNotFound(s"wharf code(${wharf.code})"))
     selectedVoy  <- wharfInfServ.voyageOfVessel(vessel, voyage)
     twoRecord    <- voyageTb.findByShipNameAndOutVoy(vessel, selectedVoy).someOrElseZIO {
-                      for {
-                        twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).retry(Schedule.spaced(10.seconds) && Schedule.recurs(2)).debug("Fetched")
-                        vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id)
-                        voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id)
-                      } yield (vesselObj, voyageObj)
+                      ZIO.logSpan("registe") {
+                        for {
+                          twoBares  <- wharfInfServ.voyageStatus(vessel, selectedVoy).retry(Schedule.spaced(10.seconds) && Schedule.recurs(2))
+                          _         <- ZIO.log(s"Fetch, ${twoBares._1}, ${twoBares._2}")
+                          vesselObj <- vesselTb.findOrCreate(twoBares._1, wharf.id)
+                          voyageObj <- voyageTb.findOrCreate(twoBares._2, vesselObj.id)
+                        } yield (vesselObj, voyageObj)
+                      }
                     }
     subscription <- subscriptionTb.updateOrCreate(subscriberId, twoRecord._2.id, infos)
   } yield ( (s"[${twoRecord._1.shipName}/${twoRecord._2.outVoy}]@${subscription.id.toString}") -> wharfInfServ.viewOfHtml(subscription, twoRecord._2, twoRecord._1, wharf))

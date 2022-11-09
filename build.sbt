@@ -18,6 +18,7 @@ lazy val root = (project in file("."))
       `zio`, `zio-test`, `zio-test-sbt`, 
       `zio-http`, `zio-json`, `zio-streams`,
       `quill-jdbc-zio`, `sqlite-jdbc`,
-      `zio-config`,
+      `zio-config`, `zio-config-typesafe`,
+      `zio-logging`
     ),
   )

@@ -3,6 +3,7 @@ package cc.knowship.subscribe
 import zio._
 import zio.http._
 import zio.http.model._
+import zio.logging.{ LogFormat, console }
 
 import cc.knowship.subscribe.util.{DebugUtils, EmailTemplate}
 import cc.knowship.subscribe.db.QuillContext
@@ -63,4 +64,7 @@ object MainApp extends ZIOAppDefault {
     // config
     AppConfig.layer,
   )
+
+  override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
+    Runtime.removeDefaultLoggers >>> console(LogFormat.default)
 }

@@ -2,6 +2,7 @@ package cc.knowship.subscribe
 
 import zio._
 import zio.config._
+import zio.config.typesafe.TypesafeConfigSource
 import zio.test._
 
 // Ref:https://github.com/zio/zio-config/blob/master/examples/shared/src/main/scala/zio/config/examples/NestedConfigExample.scala
@@ -9,7 +10,26 @@ import zio.test._
 object AppConfigSpec extends ZIOSpecDefault {
 
   def spec = suite("all suites")(
-    suite("AppConfigSpec")(
+    suite("AppConfigSpec TypesafeConfigSource.fromResourcePath")(
+      test("AppConfig key(subscribe.bindPort) have Int(9090)") {
+        for {
+          config <- ZIO.service[AppConfig]
+        } yield assertTrue(config.subscribe.bindPort == 9090)
+      },
+      test("AppConfig key(subscribe.env) == test") {
+        for {
+          config <- ZIO.service[AppConfig]
+        } yield assertTrue(config.subscribe.env == "test")
+      },
+    ).provideShared(
+      ZLayer {
+        read {
+          AppConfig.configuration.from(TypesafeConfigSource.fromResourcePath)
+        }
+      }
+    ),
+
+    suite("AppConfigSpec TypesafeConfigSource.fromResourcePath")(
       test("AppConfig key(subscribe.bindPort) have Int(8088)") {
         for {
           config <- ZIO.service[AppConfig]
@@ -32,7 +52,7 @@ object AppConfigSpec extends ZIOSpecDefault {
       }
     ).provideShared(
       ZConfig.fromPropertiesFile(
-        "./src/test/resources/application.properties", 
+        "./src/test/resources/application.properties",
         AppConfig.configuration, 
         Some('.'),
         Some(','))
