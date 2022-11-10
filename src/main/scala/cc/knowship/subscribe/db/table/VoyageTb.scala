@@ -97,29 +97,19 @@ final case class VoyageTbLive(
     val q = quote {
       for {
         vessel <- query[Vessel] if (vessel.wharfId == lift(wharfId))
-        voyage <- query[Voyage] if (voyage.updateAt < lift(timestamp)) // voyage.vesselId == lift(vessel.id) && 
+        voyage <- query[Voyage] if (voyage.vesselId == vessel.id && voyage.updateAt < lift(timestamp))
       } yield voyage
     }
 
     run(q).implicitly
   }
 
-  // Bad Case: 包含了对比的逻辑，这个逻辑完全可以给到上层
-  /*
-  def hasNotifyAfterUpdate(voyageOld: Voyage, voyageBare: Voyage): Task[Boolean] = for {
-    now     <- Clock.currentTime(TimeUnit.MILLISECONDS)
-    vNew    <- self.update(voyageBare.copy(id = voyageOld.id, vesselId = voyageOld.vesselId, createAt = voyageOld.createAt, updateAt = now))
-    // TODO 判断需要修改
-    changed <- ZIO.succeed(VoyageTb.isChanged(voyageOld, vNew))
-  } yield changed
-  */
-
   def findByShipNameAndOutVoy(shipName: String, outVoy: String): Task[Option[(Vessel, Voyage)]] = {
     
     val q = quote {
       for {
         vessel <- query[Vessel] if (vessel.shipName == lift(shipName))
-        voyage <- query[Voyage] if (voyage.outVoy == lift(outVoy)) // voyage.vesselId == lift(vessel.id) && 
+        voyage <- query[Voyage] if (voyage.vesselId == vessel.id && voyage.outVoy == lift(outVoy))
       } yield {
         (vessel, voyage)
       }

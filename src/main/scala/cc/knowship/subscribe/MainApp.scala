@@ -42,7 +42,7 @@ object MainApp extends ZIOAppDefault {
     // http
     Scope.default,
     Client.default,
-    Server.default,
+    Server.live,
     SubscriberPartialLive.layer,
     SubscribePartialLive.layer,
     WharfPartialLive.layer,
@@ -68,10 +68,22 @@ object MainApp extends ZIOAppDefault {
 
     // config
     AppConfig.layer,
+    configurableLayer,
   )
 
-  import LogFormat._
+  val configurableLayer: ZLayer[AppConfig, Throwable, ServerConfig] = ZLayer.fromZIOEnvironment {
+    for {
+      config    <- ZIO.service[AppConfig]
 
+      // Anything that need config
+      serverCfg = ServerConfig.default.port(config.subscribe.bindPort)
+    } yield ZEnvironment[ServerConfig](serverCfg)
+  }
+
+
+
+  // handle log
+  import LogFormat._
   private val logformat =
     bracketStart |-| 
       timestamp(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).fixed(19) |-| 
