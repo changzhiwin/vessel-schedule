@@ -1,7 +1,7 @@
 import BuildHelper._
 import Dependencies._
 
-ThisBuild / version          := "2.0.1"
+ThisBuild / version          := "2.0.3"
 ThisBuild / organizationName := "knowship"
 
 maintainer := "changzhiwin@gmail.com"

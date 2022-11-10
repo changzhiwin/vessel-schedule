@@ -33,7 +33,9 @@ object MainApp extends ZIOAppDefault {
         })
       }
     }
-    _ <- Server.serve(http)
+    port <- Server.install(http)
+    _    <- ZIO.log(s"App runnting in ${config.subscribe.env} mode, bind at ${port}.")
+    _    <- ZIO.never
   } yield ()
 
   override def run = httpApp.provide(
