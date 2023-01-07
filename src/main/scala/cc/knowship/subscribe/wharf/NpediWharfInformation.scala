@@ -103,7 +103,7 @@ case class NpediWharfInformation(client: Client, config: AppConfig) extends Whar
     )
 
     val rcv = s.published match {
-      case "Y" => (s.ctnStartTime, s.ctnEndTime)
+      case "Y" => (s.ctnStartTime.get, s.ctnEndTime.get)
       case _   => (Constants.DEFAULT_STRING_VALUE, Constants.DEFAULT_STRING_VALUE)
     }
 
@@ -152,9 +152,10 @@ case class NpediScheduleBody(
   vesselOwner: String,                 //"MSC",
   vesselAgent: Option[String],         // "PEN",
   serviceCode: Option[String],         // null, "serviceCode": "MSCMID",
-  lineOperatorCode: String,            //"MSC",
-  ctnStartTime: String,                //"2022-10-26 00:00:01", "9998-01-01 00:00:01"
-  ctnEndTime: String,                  //"2022-10-31 00:00:01",  "9999-01-01 00:00:01"
+  // Bug: 这个是三个属性都可能为null
+  lineOperatorCode: Option[String],            //"MSC",
+  ctnStartTime: Option[String],                //"2022-10-26 00:00:01", "9998-01-01 00:00:01"
+  ctnEndTime: Option[String],                  //"2022-10-31 00:00:01",  "9999-01-01 00:00:01"
   hazardStartTime: Option[String],     // null,
   hazardEndTime: Option[String],       // null,
   spHazardStartTime: Option[String],   // null,
